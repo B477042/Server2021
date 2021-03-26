@@ -4,6 +4,9 @@
 #include <winsock2.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include<time.h>
+#include<chrono>
+
 
 #define SERVERPORT 9000
 #define BUFSIZE    512
@@ -20,6 +23,8 @@ public:
 
 
 private:
-	void addAditionalText(char* inputBuf);
+	void addAditionalText(char* inputBuf,const char* text, int& retval);
+
+	void printCurrentTime();
 
 };

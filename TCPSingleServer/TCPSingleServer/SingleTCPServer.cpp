@@ -62,7 +62,9 @@ int USingleTCPServer::RunServer()
 	SOCKET client_sock;
 	SOCKADDR_IN clientaddr;
 	int addrlen;
-	char buf[BUFSIZE + 1];
+	char buf[BUFSIZE + 1]="";
+
+
 
 	while (1) {
 		// accept()
@@ -87,18 +89,31 @@ int USingleTCPServer::RunServer()
 			}
 			else if (retval == 0)
 				break;
+			
 
 			// 받은 데이터 출력
 			buf[retval] = '\0';
 			printf("[TCP/%s:%d] %s\n", inet_ntoa(clientaddr.sin_addr),
 				ntohs(clientaddr.sin_port), buf);
+			//printf("Retval : %d\n", retval);
 
+			//문구 추가
+			addAditionalText(buf," from Server",retval);
+			
+			//printf("before send : %s\n", buf);
 			// 데이터 보내기
+			
+
 			retval = send(client_sock, buf, retval, 0);
 			if (retval == SOCKET_ERROR) {
 				err_display("send()");
 				break;
 			}
+			
+			
+			//printCurrentTime();
+			//printf("after send : %s\t%d\n",buf,retval);
+			
 		}
 
 		// closesocket()
@@ -115,16 +130,36 @@ int USingleTCPServer::RunServer()
 	return 0;
 }
 
-void USingleTCPServer::addAditionalText(char * inputBuf)
+void USingleTCPServer::addAditionalText(char * inputBuf, const char* text, int& retval)
 {
-	if (!inputBuf)return;
+	if (!inputBuf) { printf("nullptr\n"); return; }
 
-	char Text[] = "form Server";
-	int additionalTextLength = strlen(Text);
-	//문자열 초과시 return
-	if (strlen(inputBuf) + strlen(Text) > BUFSIZE + 1)return;
-
+	//char Text[] = " from Server";
 	
+	strcat_s(inputBuf,BUFSIZE, text);
+
+	printf("NEw Length : %d\n", strlen(inputBuf));
+	retval = strlen(inputBuf);
+	//inputBuf[strlen(inputBuf) + strlen(Text)] = '\0';
+	
+
+}
+
+void USingleTCPServer::printCurrentTime()
+{
+	auto stime = std::chrono::system_clock::now();
+	auto mill = std::chrono::duration_cast<std::chrono::milliseconds>(stime.time_since_epoch());
+
+	long long currentTimeMillis = mill.count();
+	int msc = currentTimeMillis % 1000;
+
+	struct tm t;
+	time_t timer; // 시간측정
+	timer = time(NULL); // 현재 시각을 초 단위로 얻기
+	localtime_s(&t, &timer); // 초 단위의 시간을 분리하여 구조체에 넣기 
+	printf("현재 시간은 "); printf("%d년 %d월 %d일 %d시 %d분 %d초 %d milsec입니다.\n", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,msc);
+
+
 
 }
 
