@@ -94,7 +94,7 @@ int USingleTCPClient::RunClient()
 
 	// closesocket()
 	closesocket(sock);
-
+	printf("Colse Socket\n");
 	// 윈속 종료
 	WSACleanup();
 	return 0;

@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include<time.h>
 #include<chrono>
+#include<vector>
+using namespace std;
+
 
 
 #define SERVERPORT 9000
@@ -21,10 +24,21 @@ public:
 
 	int RunServer();
 
-
+	int run2();
 private:
+	
+	void createSocket();
+	void acceptSocket(SOCKET& sock);
+	
 	void addAditionalText(char* inputBuf,const char* text, int& retval);
 
-	void printCurrentTime();
+	
 
+
+
+	void printCurrentTime();
+private:
+	vector<SOCKET&>ServerSockets;
+	vector<SOCKET&>ClientSockets;
+	vector<SOCKADDR_IN&>ClientsAddrs;
 };
