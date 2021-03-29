@@ -1,3 +1,2 @@
 ﻿  SingleTCPServer.cpp
-i:\code\server2021\tcpsingleserver\tcpsingleserver\singletcpserver.cpp(185): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
   TCPSingleServer.vcxproj -> I:\CODE\Server2021\TCPSingleServer\Debug\TCPSingleServer.exe

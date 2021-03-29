@@ -21,7 +21,7 @@ int main()
 {
 	USingleTCPServer SingleTCPServer;
 	//SingleTCPServer.RunServer();
-	SingleTCPServer.run1();
+	SingleTCPServer.RunServer();
 
 	/*char* p=nullptr;
 	int a = 0;
