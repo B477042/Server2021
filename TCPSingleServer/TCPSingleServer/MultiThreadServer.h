@@ -76,21 +76,7 @@ public:
 
 }ClentsSocket;
 
-//통신 과정에 필요한 정보를 모은 구조체
-typedef struct FCommunicationData
-{
-public:
-	//소멸 테스트
-	~FCommunicationData() { cout << "\ngoodbye" << endl; }
 
-
-	class MultiThreadServer* Server;
-
-	//통신하게 될 Thread의 idx
-	int idx_Thread;
-	//ClientSockets의 포인터
-	ClentsSocket* idx_Sockets;
-}CommunicationData;
 
 
 
@@ -200,3 +186,18 @@ private:
 	CRITICAL_SECTION   hCS_DeleteCS;
 };
 
+//통신 과정에 필요한 정보를 모은 구조체
+typedef struct FCommunicationData
+{
+public:
+	//소멸 테스트
+	~FCommunicationData() { cout << "\ngoodbye" << endl; }
+
+
+	MultiThreadServer* Server;
+
+	//통신하게 될 Thread의 idx
+	int idx_Thread;
+	//ClientSockets의 포인터
+	ClentsSocket* idx_Sockets;
+}CommunicationData;

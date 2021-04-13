@@ -218,6 +218,10 @@ unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 
 	while (server->bPower)
 	{
+
+		
+
+
 		//accept로 받아온다. return value clientsocket
 		auto cSocket = server->acceptSocket(&server->ServerSockets[0]);
 
@@ -344,6 +348,15 @@ unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
 
 bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 {
+	auto Data = (FCommunicationData*)inputParam;
+
+
+	if (!Data)
+	{
+		cout << "\nCasting failed " << endl;
+		return false;
+	}
+
 	//Idx 체크
 	if (idx_t > NUM_OF_THREAD)
 	{
@@ -364,7 +377,7 @@ bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 			NULL,
 			0,
 			MultiThreadServer::procCommunication,
-			(LPVOID)(&inputParam),
+			(LPVOID)(Data),
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[idx_t]
 		);
@@ -416,6 +429,15 @@ FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
 		return nullptr;
 	}
 
+	//NUM_OF_THREAD - Idx_thread 개까지만 받는다
+	if (n_Client > NUM_OF_THREAD - Idx_thread)
+	{
+		//꽉 찼으면 1초 재운다
+		Sleep(1000);
+		cout << "Sleep" << endl;
+		return nullptr;
+	}
+
 	// 접속한 클라이언트 정보 출력
 	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
@@ -434,7 +456,7 @@ FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
 bool MultiThreadServer::receiveData(FClientSocket* cs)
 {
 	//EnterCriticalSection(&hCriticalSection);
-	EnterCriticalSection(&hCS_ReceiveData);
+	//EnterCriticalSection(&hCS_ReceiveData);
 	// 데이터 받기
 	cs->retval = recv(cs->sock, cs->buf, BUFSIZE, 0);
 	if (cs->retval == SOCKET_ERROR) {
@@ -451,14 +473,14 @@ bool MultiThreadServer::receiveData(FClientSocket* cs)
 		ntohs(cs->addr.sin_port), cs->buf);
 
 	//LeaveCriticalSection(&hCriticalSection);
-	LeaveCriticalSection(&hCS_ReceiveData);
+	//LeaveCriticalSection(&hCS_ReceiveData);
 	return true;
 }
 
 bool MultiThreadServer::sendData(FClientSocket * cs)
 {
 	//EnterCriticalSection(&hCriticalSection);
-	EnterCriticalSection(&hCS_SendData);
+//	EnterCriticalSection(&hCS_SendData);
 
 	//문구 추가
 	addAditionalText(cs->buf, " from Server", cs->retval);
@@ -472,7 +494,7 @@ bool MultiThreadServer::sendData(FClientSocket * cs)
 		return false;
 	}
 	//LeaveCriticalSection(&hCriticalSection);
-	LeaveCriticalSection(&hCS_SendData);
+	//LeaveCriticalSection(&hCS_SendData);
 	return true;
 }
 
