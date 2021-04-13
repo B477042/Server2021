@@ -52,9 +52,12 @@ int MultiThreadServer::initServer()
 
 	createServerSocket();
 
-	InitializeCriticalSection(&hCriticalSection);
+	InitializeCriticalSection(&hCS_ProcAccept);
+	InitializeCriticalSection(&hCS_AcceptSocket);
+	InitializeCriticalSection(&hCS_ReceiveData);
+	InitializeCriticalSection(&hCS_SendData);
+	InitializeCriticalSection(&hCS_DeleteCS);
 
-	
 
 	return 0;
 }
@@ -108,9 +111,11 @@ int MultiThreadServer::closeServer()
 	// closesocket()
 	closesocket(ServerSockets[0]);
 
-
-
-
+	DeleteCriticalSection(&hCS_ProcAccept);
+	DeleteCriticalSection(&hCS_AcceptSocket);
+	DeleteCriticalSection(&hCS_ReceiveData);
+	DeleteCriticalSection(&hCS_SendData);
+	DeleteCriticalSection(&hCS_DeleteCS);
 	// 윈속 종료
 	WSACleanup();
 	return 0;
@@ -213,8 +218,38 @@ unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 
 	while (server->bPower)
 	{
-		
-		server->acceptSocket(&server->ServerSockets[0]);
+		//accept로 받아온다. return value clientsocket
+		auto cSocket = server->acceptSocket(&server->ServerSockets[0]);
+
+		if (!cSocket) { cout << "cSocket is nullptr" << endl; return-1; }
+
+
+		FCommunicationData* Data = new FCommunicationData();
+		int idx_t=-1;
+		Data->Server = server;
+		Data->idx_Sockets = cSocket;
+
+		//queue<int> remainThreadSlot 에 접근하여 남아있는 Thread index를 받아온다.
+		//여러 쓰레드에서 동시에 접근하면 꼬이니까 동기화 시켜둔다
+		EnterCriticalSection(&server->hCS_ProcAccept);
+
+
+		if (server->remainThreadSlot.empty())
+		{
+			LeaveCriticalSection(&server->hCS_ProcAccept);
+			continue;
+		}
+
+		//client를 늘려준다. 
+		idx_t = server->addClient();
+
+		Data->idx_Thread = idx_t;
+
+
+		LeaveCriticalSection(&server->hCS_ProcAccept);
+		//thread를 할당해서 통신을 시킨다
+		server->createCommunicationRoom(Data, idx_t);
+
 	}
 
 
@@ -225,6 +260,24 @@ unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
 {
 	//cout << "\n====proc Communication Thread id : " << this_thread::get_id() << "========" << endl;
 
+	auto Data = (FCommunicationData*)lpParam;
+
+	if (!Data)
+	{
+		cout << "Fail to Casting Data" << endl;
+		delete Data;
+		return -1;
+	}
+
+
+
+
+	//송수신 중 문제가 발생되면 중단한다
+	bool bResult = true;
+
+	auto server = Data->Server;
+	auto socket = Data->idx_Sockets;
+
 	//데이터 송수신 상태
 	while (1)
 	{
@@ -232,84 +285,73 @@ unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
 		if (!bResult)break;
 
 		//수신
-		for (auto it : ClientSockets)
-			if (receiveData(it) == false)
-			{
+		
+		if (server->receiveData(socket) == false)
+		{
 				bResult = false;
-				eraseIndex = it;
-				++n_Disconnect;
-
-			}
-
+				
+		}
+		//문제가 생기면 송수신 중단
+		if (!bResult)break;
 
 		//송신
-		for (auto it : ClientSockets)
-			if (sendData(it) == false)
-			{
-				bResult = false;
-				eraseIndex = it;
-				++n_Disconnect;
-			}
+		
+		if (server->sendData(socket) == false)
+		{
+			bResult = false;
+			
+		}
 
 	}
-	//한개가 해제 될 경우
-	if (n_Disconnect == 1)
-	{
+
+
+		//client sockets에서 현재 이 클라이언트와의 정보를 지운다. 
+	EnterCriticalSection(&server->hCS_DeleteCS);
+	
 		// closesocket()
-		closesocket(eraseIndex->sock);
-		printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
-			inet_ntoa(eraseIndex->addr.sin_addr), ntohs(eraseIndex->addr.sin_port));
+		closesocket(socket->sock);
+		::printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
+			inet_ntoa(socket->addr.sin_addr), ntohs(socket->addr.sin_port));
 
-
-		for (unsigned int i = 0; i < ClientSockets.size(); ++i)
+		server->removeClient(Data->idx_Thread);
+		
+		int idx_remove = -1;
+		//ClinetsSockets에서 찾아서 지울걸 찾는다. 
+		for (unsigned int i = 0; i < server->ClientSockets.size(); ++i)
 		{
-			if (ClientSockets[i] == eraseIndex)
-			{
-				delete(ClientSockets[i]);
-				eraseIndex = nullptr;
-				ClientSockets.erase(ClientSockets.begin() + i);
-				//printf("Erase ClientSocket\n"); //출력 확인
-			}
+			if (server->ClientSockets[i] == Data->idx_Sockets)
+				idx_remove = i;
 		}
-		printf("dis 1\n");
-
-	}
-	//2개 인 경우 다 지운다
-	if (n_Disconnect == 2)
-	{
-		for (auto it : ClientSockets)
-		{
-			closesocket(it->sock);
-			printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
-				inet_ntoa(it->addr.sin_addr), ntohs(it->addr.sin_port));
-			delete(it);
-			it = nullptr;
-		}
-		ClientSockets.clear();
-		printf("dis 2\n");
-	}
 
 
+		
+		delete(server->ClientSockets[idx_remove]);
+		server->ClientSockets[idx_remove] = nullptr;
+		server->ClientSockets.erase(server->ClientSockets.begin() + idx_remove);
+		//printf("Erase ClientSocket\n"); //출력 확인
 
+	LeaveCriticalSection(&server->hCS_DeleteCS);
+		delete Data;
+		
 
-
-
+	
+	
 	return 0;
 }
 
 
 
 
-bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx)
+bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 {
 	//Idx 체크
-	if (idx > NUM_OF_THREAD)
+	if (idx_t > NUM_OF_THREAD)
 	{
 		cout << "Thread Overflow " << endl;
 		return false;
 	}
 
-	if (idx < Idx_thread)
+	if (idx_t < Idx_thread)
 	{
 		cout << "Thread Underflow" << endl;
 		return false;
@@ -317,32 +359,38 @@ bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx)
 
 
 
-	hThread[idx] = (HANDLE)
+	hThread[idx_t] = (HANDLE)
 		_beginthreadex(
 			NULL,
 			0,
 			MultiThreadServer::procCommunication,
 			(LPVOID)(&inputParam),
 			CREATE_SUSPENDED,
-			(unsigned *)&dwThreadId[idx]
+			(unsigned *)&dwThreadId[idx_t]
 		);
 	
-	if (hThread[idx] == NULL)
+	if (hThread[idx_t] == NULL)
 	{
 		_tprintf(_T("Thread creation fault! \n"));
 		return false;
 	}
 
+	ResumeThread(hThread[idx_t]);
+
 
 	return true;
 }
 
-void MultiThreadServer::acceptSocket(SOCKET * sock)
+
+//
+FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
 {
 	//예외처리 - 수용인원보다 더 많은 클라이언트가 접속 시도시
 	//		   - power가 꺼졌을 때
 
-	if (!bPower) { cout << "\n===== power off =====\n"; return; }
+
+
+	if (!bPower) { cout << "\n===== power off =====\n"; return nullptr; }
 
 	// 데이터 통신에 사용할 변수
 	SOCKET client_sock;
@@ -351,17 +399,22 @@ void MultiThreadServer::acceptSocket(SOCKET * sock)
 
 
 	//먼저 여기까지 실행한 쓰레드를 우선으로 한다
-	EnterCriticalSection(&hCriticalSection);
+	//EnterCriticalSection(&hCriticalSection);
+	EnterCriticalSection(&hCS_AcceptSocket);
 
 	// accept()
 	addrlen = sizeof(clientaddr);
 	client_sock = accept(*sock, (SOCKADDR*)&clientaddr, &addrlen);
 	if (client_sock == INVALID_SOCKET) {
 		err_display("accept()");
-		return;
+		return nullptr;
 	}
 
-	if (!bPower) { cout << "\n===== power off =====\n"; LeaveCriticalSection(&hCriticalSection); return; }
+	if (!bPower) { 
+		cout << "\n===== power off =====\n"; 
+		LeaveCriticalSection(&hCS_AcceptSocket);
+		return nullptr;
+	}
 
 	// 접속한 클라이언트 정보 출력
 	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
@@ -372,14 +425,16 @@ void MultiThreadServer::acceptSocket(SOCKET * sock)
 
 	ClientSockets.push_back(clientSocket);
 
-	LeaveCriticalSection(&hCriticalSection);
-
+	//LeaveCriticalSection(&hCriticalSection);
+	LeaveCriticalSection(&hCS_AcceptSocket);
+	
+	return clientSocket;
 }
 
 bool MultiThreadServer::receiveData(FClientSocket* cs)
 {
-	EnterCriticalSection(&hCriticalSection);
-
+	//EnterCriticalSection(&hCriticalSection);
+	EnterCriticalSection(&hCS_ReceiveData);
 	// 데이터 받기
 	cs->retval = recv(cs->sock, cs->buf, BUFSIZE, 0);
 	if (cs->retval == SOCKET_ERROR) {
@@ -395,13 +450,16 @@ bool MultiThreadServer::receiveData(FClientSocket* cs)
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cs->buf);
 
-	LeaveCriticalSection(&hCriticalSection);
+	//LeaveCriticalSection(&hCriticalSection);
+	LeaveCriticalSection(&hCS_ReceiveData);
 	return true;
 }
 
 bool MultiThreadServer::sendData(FClientSocket * cs)
 {
-	EnterCriticalSection(&hCriticalSection);
+	//EnterCriticalSection(&hCriticalSection);
+	EnterCriticalSection(&hCS_SendData);
+
 	//문구 추가
 	addAditionalText(cs->buf, " from Server", cs->retval);
 
@@ -409,10 +467,12 @@ bool MultiThreadServer::sendData(FClientSocket * cs)
 	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
-		LeaveCriticalSection(&hCriticalSection);
+		//LeaveCriticalSection(&hCriticalSection);
+		LeaveCriticalSection(&hCS_SendData);
 		return false;
 	}
-	LeaveCriticalSection(&hCriticalSection);
+	//LeaveCriticalSection(&hCriticalSection);
+	LeaveCriticalSection(&hCS_SendData);
 	return true;
 }
 

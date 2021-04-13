@@ -72,18 +72,25 @@ public:
 	SOCKADDR_IN addr;
 	int retval;
 	char buf[BUFSIZE + 1] = "";
-	//할당된 쓰레드 idx
-	int idx_LinkedThread;
+	
 
 }ClentsSocket;
 
+//통신 과정에 필요한 정보를 모은 구조체
 typedef struct FCommunicationData
 {
 public:
-	MultiThreadServer* Server;
-	int idx_Thread;
+	//소멸 테스트
+	~FCommunicationData() { cout << "\ngoodbye" << endl; }
 
-};
+
+	class MultiThreadServer* Server;
+
+	//통신하게 될 Thread의 idx
+	int idx_Thread;
+	//ClientSockets의 포인터
+	ClentsSocket* idx_Sockets;
+}CommunicationData;
 
 
 
@@ -114,7 +121,7 @@ public:
 
 
 	//idx번째 통신 쓰레드를 만들어준다. 실패시 return false
-	bool createCommunicationRoom(void* inputParam, int idx);
+	bool createCommunicationRoom(void* inputParam, int idx_t);
 private:
 	//서버 소켓 생성
 	void createServerSocket();
@@ -140,7 +147,7 @@ private:
 
 	//============ 쓰레드내부 통신 함수 ============
 	//클라이언트 accept
-	void acceptSocket(SOCKET* sock);
+	FClientSocket* acceptSocket(SOCKET* sock);
 	//해당 클라이언트로부터 데이터 수신
 	bool receiveData(FClientSocket* cs);
 	//해당 클라이언트로 데이터 전송
@@ -179,14 +186,17 @@ private:
 	unsigned short n_Client;
 	//unsigned 
 
-	CRITICAL_SECTION   hCriticalSection;
+
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 	//vector<DWORD> dwThreadId;
 	HANDLE hThread[NUM_OF_THREAD];
 	//vector<HANDLE> hThread;
 	
-
-
+	CRITICAL_SECTION   hCS_ProcAccept;
+	CRITICAL_SECTION   hCS_AcceptSocket;
+	CRITICAL_SECTION   hCS_ReceiveData;
+	CRITICAL_SECTION   hCS_SendData;
+	CRITICAL_SECTION   hCS_DeleteCS;
 };
 
