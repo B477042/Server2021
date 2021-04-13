@@ -14,6 +14,7 @@
 #include <Windows.h>
 #include <process.h>
 #include <tchar.h>
+#include <queue>
 
 using namespace std;
 
@@ -71,9 +72,18 @@ public:
 	SOCKADDR_IN addr;
 	int retval;
 	char buf[BUFSIZE + 1] = "";
+	//할당된 쓰레드 idx
+	int idx_LinkedThread;
+
 }ClentsSocket;
 
+typedef struct FCommunicationData
+{
+public:
+	MultiThreadServer* Server;
+	int idx_Thread;
 
+};
 
 
 
@@ -93,6 +103,14 @@ public:
 	//
 	int closeServer();
 
+	/*bool bIsPowernOn() { return bPower; }
+	void SetPowerOff() { bPower = false; }*/
+	/*int AddWaitTimer(int num) { 
+		waitTimer += num;
+		if (waitTimer > M_waitTime)waitTimer = M_waitTime;
+
+		return waitTimer;
+	}*/
 
 
 	//idx번째 통신 쓰레드를 만들어준다. 실패시 return false
@@ -102,10 +120,14 @@ private:
 	void createServerSocket();
 
 	//===============쓰레드 관련 함수=============
-//대기 쓰레드 함수
+	//상세 설명은 cpp 파일에
+
+	//대기 쓰레드 함수
 	static unsigned int WINAPI procWait(LPVOID lpParam);
+
 	//Accept만 수행해주는 함수
 	static unsigned int WINAPI procAccept(LPVOID lpParam);
+
 	//클라이언트와 통신하는 과정의 함수
 	static unsigned int WINAPI procCommunication(LPVOID lpParam);
 
@@ -128,8 +150,10 @@ private:
 
 
 	//================ 기타 함수 ==================
-	////쓰레드에 자리가 있는지 확인하는 함수. 자리가 있다면 true
-	//bool checkThreadSpace();
+	//클라이언트와 연결 돼서 클라이언트와 관련된 정보를 업데이트 해줍니다.
+	int addClient();
+	//클라이언트와 연결 해제.
+	int removeClient(int num);
 
 
 	//============== 현재 시간 확인 =============
@@ -143,12 +167,17 @@ private:
 	//클라이언트 최대 수
 	const int M_Clients = 8;
 	
-	//응답없음 최대 대기시간 1분
-	const float M_waitTime = 60.0f;
+	//응답없음 최대 대기시간 10초
+	const DWORD M_waitTime = 10000;
 	//응답 대기 타이머
-	float waitTimer;
+	DWORD waitTimer;
 	//쓰레드 루프 전체 종료용
 	bool bPower;
+
+	//작업 쓰레드로 배치 가능한 슬롯 인덱스
+	queue<int> remainThreadSlot;
+	unsigned short n_Client;
+	//unsigned 
 
 	CRITICAL_SECTION   hCriticalSection;
 

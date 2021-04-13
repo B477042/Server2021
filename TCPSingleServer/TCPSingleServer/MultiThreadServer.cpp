@@ -7,6 +7,11 @@ MultiThreadServer::MultiThreadServer()
 {
 	waitTimer = 0;
 	bPower = true;
+	n_Client = 0;
+
+	n_Client = 0;
+	for (int i = Idx_thread; i < NUM_OF_THREAD; ++i)
+		remainThreadSlot.push(i);
 }
 
 //int MultiThreadServer::RunServer()
@@ -62,7 +67,7 @@ int MultiThreadServer::RunMultiThreadServer()
 			NULL,
 			0,
 			MultiThreadServer::procWait,
-			NULL,
+			this,
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[Idx_Wait]
 		);
@@ -78,7 +83,7 @@ int MultiThreadServer::RunMultiThreadServer()
 			NULL,
 			0,
 			MultiThreadServer::procAccept,
-			NULL,
+			this,
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[Idx_Accept]
 		);
@@ -140,20 +145,77 @@ void MultiThreadServer::createServerSocket()
 
 }
 
+/*
+	어떤 클라이언트와도 연결이 되지 않았다면 타이머를 작동시킨다.
+	클라이언트와의 대기 시간은 const float M_waitTimer를 기준으로 한다.(기본 10초)
 
+	- 클라이언트와 연결된 쓰레드가 없다면 타이머를 돌린다. 
+	- 연결된 상태라면 쓰레드를 굴린다. 
+*/
 unsigned int __stdcall MultiThreadServer::procWait(LPVOID lpParam)
 {
-	cout << "\n====procWait Thread id : " << this_thread::get_id() << "========" << endl;
+	
 
 
+//	cout << "\n====procWait Thread id : " << this_thread::get_id() << "========" << endl;
+	auto server = (MultiThreadServer*)lpParam;
+	if (!server) {
+		cout << " Casting Failed : procWait" << endl;
+	}
+
+	DWORD sleepTime = 100;
+
+	//연결된 클라이언트가 없다면 0.1초마다 타이머를 한번씩 올린다. 
+	while (1)
+	{
+		//power check
+		if (!server ->bPower)break;
+		// timer timeout		
+		if (server->waitTimer >= server->M_waitTime)break;
+
+		if (server->n_Client > 0)continue;
+		
+		Sleep(sleepTime);
+		server->waitTimer += sleepTime;
+
+		DWORD dur = server->M_waitTime - server->waitTimer;
+
+		if (dur == server->M_waitTime / 2)
+		{
+			cout << server->M_waitTime / 2000 << "초 후 프로그렘 종료" << endl;
+			continue;
+		}
+
+		if (dur == server->M_waitTime / 4)
+		{
+			cout << server->M_waitTime / 4000 << "초 후 프로그렘 종료" << endl;
+			continue;
+		}
+	}
+
+	
+	//power 종료
+	server->bPower = false;
+	
 
 	return 0;
 }
 
+
+
 unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 {
-	cout << "\n====proc Accept Thread id : " << this_thread::get_id() << "========" << endl;
+	//cout << "\n====proc Accept Thread id : " << this_thread::get_id() << "========" << endl;
+	auto server = (MultiThreadServer*)lpParam;
+	if (!server) {
+		cout << " Casting Failed : procAccept" << endl;
+	}
 
+	while (server->bPower)
+	{
+		
+		server->acceptSocket(&server->ServerSockets[0]);
+	}
 
 
 	return 0;
@@ -161,7 +223,75 @@ unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 
 unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
 {
-	cout << "\n====proc Communication Thread id : " << this_thread::get_id() << "========" << endl;
+	//cout << "\n====proc Communication Thread id : " << this_thread::get_id() << "========" << endl;
+
+	//데이터 송수신 상태
+	while (1)
+	{
+		//문제가 생기면 송수신 중단
+		if (!bResult)break;
+
+		//수신
+		for (auto it : ClientSockets)
+			if (receiveData(it) == false)
+			{
+				bResult = false;
+				eraseIndex = it;
+				++n_Disconnect;
+
+			}
+
+
+		//송신
+		for (auto it : ClientSockets)
+			if (sendData(it) == false)
+			{
+				bResult = false;
+				eraseIndex = it;
+				++n_Disconnect;
+			}
+
+	}
+	//한개가 해제 될 경우
+	if (n_Disconnect == 1)
+	{
+		// closesocket()
+		closesocket(eraseIndex->sock);
+		printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
+			inet_ntoa(eraseIndex->addr.sin_addr), ntohs(eraseIndex->addr.sin_port));
+
+
+		for (unsigned int i = 0; i < ClientSockets.size(); ++i)
+		{
+			if (ClientSockets[i] == eraseIndex)
+			{
+				delete(ClientSockets[i]);
+				eraseIndex = nullptr;
+				ClientSockets.erase(ClientSockets.begin() + i);
+				//printf("Erase ClientSocket\n"); //출력 확인
+			}
+		}
+		printf("dis 1\n");
+
+	}
+	//2개 인 경우 다 지운다
+	if (n_Disconnect == 2)
+	{
+		for (auto it : ClientSockets)
+		{
+			closesocket(it->sock);
+			printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
+				inet_ntoa(it->addr.sin_addr), ntohs(it->addr.sin_port));
+			delete(it);
+			it = nullptr;
+		}
+		ClientSockets.clear();
+		printf("dis 2\n");
+	}
+
+
+
+
 
 
 	return 0;
@@ -210,13 +340,18 @@ bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx)
 void MultiThreadServer::acceptSocket(SOCKET * sock)
 {
 	//예외처리 - 수용인원보다 더 많은 클라이언트가 접속 시도시
+	//		   - power가 꺼졌을 때
 
+	if (!bPower) { cout << "\n===== power off =====\n"; return; }
 
 	// 데이터 통신에 사용할 변수
 	SOCKET client_sock;
 	SOCKADDR_IN clientaddr;
 	int addrlen;
 
+
+	//먼저 여기까지 실행한 쓰레드를 우선으로 한다
+	EnterCriticalSection(&hCriticalSection);
 
 	// accept()
 	addrlen = sizeof(clientaddr);
@@ -226,6 +361,8 @@ void MultiThreadServer::acceptSocket(SOCKET * sock)
 		return;
 	}
 
+	if (!bPower) { cout << "\n===== power off =====\n"; LeaveCriticalSection(&hCriticalSection); return; }
+
 	// 접속한 클라이언트 정보 출력
 	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
@@ -234,10 +371,15 @@ void MultiThreadServer::acceptSocket(SOCKET * sock)
 	clientSocket->addr = clientaddr;
 
 	ClientSockets.push_back(clientSocket);
+
+	LeaveCriticalSection(&hCriticalSection);
+
 }
 
-bool MultiThreadServer::receiveData(FClientSocket * cs)
+bool MultiThreadServer::receiveData(FClientSocket* cs)
 {
+	EnterCriticalSection(&hCriticalSection);
+
 	// 데이터 받기
 	cs->retval = recv(cs->sock, cs->buf, BUFSIZE, 0);
 	if (cs->retval == SOCKET_ERROR) {
@@ -253,13 +395,13 @@ bool MultiThreadServer::receiveData(FClientSocket * cs)
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cs->buf);
 
-
+	LeaveCriticalSection(&hCriticalSection);
 	return true;
 }
 
 bool MultiThreadServer::sendData(FClientSocket * cs)
 {
-	
+	EnterCriticalSection(&hCriticalSection);
 	//문구 추가
 	addAditionalText(cs->buf, " from Server", cs->retval);
 
@@ -267,8 +409,10 @@ bool MultiThreadServer::sendData(FClientSocket * cs)
 	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
+		LeaveCriticalSection(&hCriticalSection);
 		return false;
 	}
+	LeaveCriticalSection(&hCriticalSection);
 	return true;
 }
 
@@ -284,6 +428,24 @@ void MultiThreadServer::addAditionalText(char * inputBuf, const char * text, int
 	retval = strlen(inputBuf);
 
 
+}
+
+int MultiThreadServer::addClient()
+{
+	++n_Client;
+	int retval = remainThreadSlot.front();
+	remainThreadSlot.pop();
+	return retval;
+}
+
+int MultiThreadServer::removeClient(int num)
+{
+	if (num < Idx_thread || num >= NUM_OF_THREAD)
+		return -1;
+	--n_Client;
+	remainThreadSlot.push(num);
+
+	return 0;
 }
 
 //// num_of_thread보다 더 많이 들어가는걸 방지한다
