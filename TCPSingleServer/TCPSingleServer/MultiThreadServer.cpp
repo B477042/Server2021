@@ -181,6 +181,8 @@ unsigned int __stdcall MultiThreadServer::procWait(LPVOID lpParam)
 		if (server->n_Client > 0)continue;
 		
 		Sleep(sleepTime);
+		
+
 		server->waitTimer += sleepTime;
 
 		DWORD dur = server->M_waitTime - server->waitTimer;
@@ -225,7 +227,7 @@ unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 		//accept로 받아온다. return value clientsocket
 		auto cSocket = server->acceptSocket(&server->ServerSockets[0]);
 
-		if (!cSocket) { cout << "cSocket is nullptr" << endl; return-1; }
+		if (!cSocket) { /*cout << "cSocket is nullptr" << endl;*/ continue; }
 
 
 		FCommunicationData* Data = new FCommunicationData();
@@ -412,7 +414,7 @@ FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
 
 
 	//먼저 여기까지 실행한 쓰레드를 우선으로 한다
-	//EnterCriticalSection(&hCriticalSection);
+	
 	EnterCriticalSection(&hCS_AcceptSocket);
 
 	// accept()
@@ -430,17 +432,18 @@ FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
 	}
 
 	//NUM_OF_THREAD - Idx_thread 개까지만 받는다
-	if (n_Client > NUM_OF_THREAD - Idx_thread)
+	if (n_Client > NUM_OF_THREAD - Idx_thread-1)
 	{
 		//꽉 찼으면 1초 재운다
-		Sleep(1000);
 		cout << "Sleep" << endl;
+		Sleep(1000);
 		return nullptr;
 	}
 
 	// 접속한 클라이언트 정보 출력
 	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+	
 	FClientSocket* clientSocket = new FClientSocket();
 	clientSocket->sock = client_sock;
 	clientSocket->addr = clientaddr;

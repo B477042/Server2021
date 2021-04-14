@@ -113,7 +113,7 @@ private:
 	void createServerSocket();
 
 	//===============쓰레드 관련 함수=============
-	//상세 설명은 cpp 파일에
+	
 
 	//대기 쓰레드 함수
 	static unsigned int WINAPI procWait(LPVOID lpParam);
@@ -191,7 +191,7 @@ typedef struct FCommunicationData
 {
 public:
 	//소멸 테스트
-	~FCommunicationData() { cout << "\ngoodbye" << endl; }
+	//~FCommunicationData() { cout << "\ngood bye" << endl; }
 
 
 	MultiThreadServer* Server;
