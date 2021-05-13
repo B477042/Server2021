@@ -79,16 +79,16 @@ int UTCPClient::RunClient()
 	
 		
 		//데이터 보내고 받기
-		SendData(retval, sock, buf, strlen(buf), 0);
-		ReceiveData(retval, sock, buf, BUFSIZE, 0);
-		//ReceiveData(retval, sock, buf, BUFSIZE, 0);
+		sendData(retval, sock, buf, strlen(buf), 0);
+		receiveData(retval, sock, buf, BUFSIZE, 0);
+		//receiveData(retval, sock, buf, BUFSIZE, 0);
 
 		////텍스트 추가
 		//addAditionalText(buf, " from Client");
 
 		////데이터 보내고 받기
-		//SendData(retval, sock, buf, strlen(buf), 0);
-		//ReceiveData(retval, sock, buf, BUFSIZE, 0);
+		//sendData(retval, sock, buf, strlen(buf), 0);
+		//receiveData(retval, sock, buf, BUFSIZE, 0);
 
 	}
 
@@ -100,7 +100,17 @@ int UTCPClient::RunClient()
 	return 0;
 }
 
-bool UTCPClient::SendData(int&retval, SOCKET & sock, char * buf, int length, int flags)
+unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
+{
+	return 0;
+}
+
+unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
+{
+	return 0;
+}
+
+bool UTCPClient::sendData(int&retval, SOCKET & sock, char * buf, int length, int flags)
 {
 	// 데이터 보내기
 	retval = send(sock, buf, strlen(buf), 0);
@@ -112,7 +122,7 @@ bool UTCPClient::SendData(int&retval, SOCKET & sock, char * buf, int length, int
 	return true;
 }
 
-bool UTCPClient::ReceiveData(int&retval, SOCKET & sock, char * buf, int length, int flags)
+bool UTCPClient::receiveData(int&retval, SOCKET & sock, char * buf, int length, int flags)
 {
 	// 데이터 받기. 
 	/*retval = recvn(sock, buf, BUFSIZE, 0);
@@ -133,7 +143,7 @@ bool UTCPClient::ReceiveData(int&retval, SOCKET & sock, char * buf, int length, 
 
 
 	// 받은 데이터 출력
-	buf[retval] = '\0';
+	//buf[retval] = '\0';
 	printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
 	printf("[받은 데이터] %s\t\n", buf);
 	return true;
@@ -143,40 +153,41 @@ bool UTCPClient::ReceiveData(int&retval, SOCKET & sock, char * buf, int length, 
 // 사용자 정의 데이터 수신 함수. 
 int UTCPClient::recvn(SOCKET s, char* buf, int len, int flags)
 {
-    int received;
-    char* ptr = buf;
-    int left = len;
+	//   int received;
+	//   char* ptr = buf;
+	//   int left = len;
 
-	//printf("\nReceived string length : %d\n", len);
+	   ////printf("\nReceived string length : %d\n", len);
 
-	//수신 받은 문자열의 길이를 반환
-	received = recv(s, ptr, left, flags);
-	if (received == SOCKET_ERROR)
-		return SOCKET_ERROR;
-	else if (received == 0)
-		return(len - left);
+	   ////수신 받은 문자열의 길이를 반환
+	   //received = recv(s, ptr, left, flags);
+	   //if (received == SOCKET_ERROR)
+	   //	return SOCKET_ERROR;
+	   //else if (received == 0)
+	   //	return(len - left);
 
-	left -= received;
+	   //left -= received;
 
-	//ptr += received;
-	//printf("Left : %d\tptr : %s\n", left, ptr);
- //   while (left > 0) {
- //       
-	//printf("Received string length : %d\n", received);
-	//	//printf("left : %d\n", left);
- //       if (received == SOCKET_ERROR)
- //           return SOCKET_ERROR;
- //       else if (received == 0)
- //           break;
+	   //ptr += received;
+	   //printf("Left : %d\tptr : %s\n", left, ptr);
+	//   while (left > 0) {
+	//       
+	   //printf("Received string length : %d\n", received);
+	   //	//printf("left : %d\n", left);
+	//       if (received == SOCKET_ERROR)
+	//           return SOCKET_ERROR;
+	//       else if (received == 0)
+	//           break;
 
- //       left -= received;
+	//       left -= received;
 
- //       ptr += received;
-	//	printf("Left : %d\tptr : %s\n", left, ptr);
- //   }
-	//printf("return value : %d\n", (len - left));
-    return (len - left);
+	//       ptr += received;
+	   //	printf("Left : %d\tptr : %s\n", left, ptr);
+	//   }
+	   //printf("return value : %d\n", (len - left));
+	return 0;
 }
+
 
 void UTCPClient::addAditionalText(char * inputBuf,const char* text)
 {

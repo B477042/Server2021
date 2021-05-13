@@ -19,6 +19,11 @@ static void err_quit(const char* msg);
 static void err_display(const char* msg);
 
 
+typedef struct F
+{
+
+};
+
 
 class UTCPClient
 {
@@ -27,15 +32,18 @@ public:
 	int RunClient();
 
 	
-	bool SendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
-	bool ReceiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
 
 
 
 
 private:
 
-	
+	static unsigned int WINAPI procRecieve(LPVOID IpParam);
+	static unsigned int WINAPI procSend(LPVOID IpParam);
+
+
+	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
+	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
 
 
 	int recvn(SOCKET s, char* buf, int len, int flags);
@@ -45,6 +53,8 @@ private:
 	//Share Value를 읽어들입니다. 만약 못 찾으면 무한대 리턴
 	int findShare(const char* buf);
 
+
+private:
 	
 
 };
