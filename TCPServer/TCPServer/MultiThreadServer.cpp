@@ -12,6 +12,8 @@ MultiThreadServer::MultiThreadServer()
 	n_Client = 0;
 	for (int i = Idx_thread; i < NUM_OF_THREAD; ++i)
 		remainThreadSlot.push(i);
+
+	
 }
 
 
@@ -75,6 +77,8 @@ int MultiThreadServer::RunMultiThreadServer()
 
 	//cout << "stop!" << endl;
 	WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+
+	cout << "ByeBye" << endl;
 	//cout << "GJ" << endl;
 	return 0;
 }
@@ -120,8 +124,9 @@ void MultiThreadServer::createServerSocket()
 
 	ServerSockets.push_back(sock);
 
-	ServerSockets.push_back(sock);
+	//ServerSockets.push_back(sock);
 
+	
 }
 
 /*
@@ -152,7 +157,14 @@ unsigned int __stdcall MultiThreadServer::procWait(LPVOID lpParam)
 		// timer timeout		
 		if (server->waitTimer >= server->M_waitTime)break;
 
-		if (server->n_Client > 0)continue;
+		//연결이 됐다면
+		if (server->n_Client > 0) { 
+			//타이머 초기화
+			server->waitTimer = 0;
+
+
+			continue; 
+		}
 		
 		Sleep(sleepTime);
 		
@@ -183,7 +195,7 @@ unsigned int __stdcall MultiThreadServer::procWait(LPVOID lpParam)
 }
 
 
-
+//Power 내려가면 꺼진다
 unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 {
 	//cout << "\n====proc Accept Thread id : " << this_thread::get_id() << "========" << endl;
@@ -280,6 +292,9 @@ unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
 			bResult = false;
 			
 		}
+
+		server->sendShare(socket);
+
 
 	}
 
@@ -481,9 +496,37 @@ void MultiThreadServer::addAditionalText(char * inputBuf, const char * text, int
 	
 
 	strcat_s(inputBuf, BUFSIZE, text);
-
+	
 	
 	retval = strlen(inputBuf);
+
+
+}
+
+void MultiThreadServer::sendShare(FClientSocket * cs)
+{
+	//buf값 초기화
+	memset(cs->buf, 0, sizeof cs->buf);
+	////Client ip주소 써주기
+	//addAditionalText(cs->buf, inet_ntoa(cs->addr.sin_addr), cs->retval);
+	////share text 써주기
+	//addAditionalText(cs->buf, " share=", cs->retval);
+
+	////Test value 10
+	//addAditionalText(cs->buf, "10", cs->retval);
+
+	//보낼 메시지 작성
+	char message[BUFSIZE];
+	sprintf(message, "%s share=10", inet_ntoa(cs->addr.sin_addr));
+	memcpy(cs->buf, message, sizeof(message));
+
+	printf("\nSend Message : %s\n", message);
+	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
+	if (cs->retval == SOCKET_ERROR)
+	{
+		err_display("send()");
+
+	}
 
 
 }

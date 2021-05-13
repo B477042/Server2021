@@ -144,6 +144,12 @@ private:
 	//원하는 문구를 추가
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
+	//==============Share Value 관련 함수===========
+	//클라이언트로 클라이언트 ip와 share 값을 넘겨준다
+	void sendShare(FClientSocket*cs);
+	void receiveShare(FClientSocket* cs);
+
+
 
 	//================ 기타 함수 ==================
 	//클라이언트와 연결 돼서 클라이언트와 관련된 정보를 업데이트 해줍니다.
