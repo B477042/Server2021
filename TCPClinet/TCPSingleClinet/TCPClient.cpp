@@ -33,13 +33,13 @@ void err_display(const char* msg)
 
 UTCPClient::UTCPClient()
 {
-
+	
 }
 
 int UTCPClient::RunClient()
 {
 	int retval;
-
+	
 	// 윈속 초기화
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
@@ -48,7 +48,7 @@ int UTCPClient::RunClient()
 	// socket()
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == INVALID_SOCKET) err_quit("socket()");
-
+	
 	// connect()
 	SOCKADDR_IN serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
@@ -76,7 +76,7 @@ int UTCPClient::RunClient()
 		if (strlen(buf) == 0)
 			break;
 		
-	
+
 		
 		//데이터 보내고 받기
 		sendData(retval, sock, buf, strlen(buf), 0);
@@ -216,18 +216,19 @@ void UTCPClient::printCurrentTime()
 
 }
 
+void UTCPClient::clearBuffer(char * buf)
+{
+	if (!buf)return;
+	memset(buf, 0, sizeof buf);
+	
+}
+
 int UTCPClient::findShare(const char* buf)
 {
 	//찾는데 실패하면 리턴
 	int infinity = INT_MAX;
-
-	for (int i = 0; i < strlen(buf); ++i)
-	{
-		if (buf[i] == 's')
-		{
-			
-		}
-	}
+	
+	
 
 
 

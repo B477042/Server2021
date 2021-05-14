@@ -475,7 +475,6 @@ bool MultiThreadServer::sendData(FClientSocket * cs)
 
 	//문구 추가
 	addAditionalText(cs->buf, " from Server", cs->retval);
-
 	// 메시지 보내기
 	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
 	if (cs->retval == SOCKET_ERROR) {

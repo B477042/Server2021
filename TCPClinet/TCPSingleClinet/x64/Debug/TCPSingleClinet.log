@@ -1,5 +1,1 @@
-﻿  TCPClient.cpp
-i:\code\server2021\tcpclinet\tcpsingleclinet\tcpclient.cpp(73): warning C4267: '=': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-i:\code\server2021\tcpclinet\tcpsingleclinet\tcpclient.cpp(82): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-i:\code\server2021\tcpclinet\tcpsingleclinet\tcpclient.cpp(106): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  TCPSingleClinet.vcxproj -> I:\CODE\Server2021\TCPClinet\x64\Debug\TCPClinet.exe
+﻿  TCPSingleClinet.vcxproj -> D:\Server2021\TCPClinet\x64\Debug\TCPClinet.exe

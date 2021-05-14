@@ -15,6 +15,15 @@ using namespace std;
 #define SERVERPORT 9000
 #define BUFSIZE    512
 
+//thread 2개를 사용합니다
+#define NUM_OF_THREAD 2
+//0번 Thread에 receive 할당
+#define Idx_Receive  0
+//1번 쓰레드에 send 할당
+#define  Idx_Send  1
+
+
+
 static void err_quit(const char* msg);
 static void err_display(const char* msg);
 
@@ -50,11 +59,16 @@ private:
 	void addAditionalText(char* inputBuf,const char* text);
 	void printCurrentTime();
 
+
+	//Buffer에 적힌 내용들을 다 지워줍니다.
+	void clearBuffer(char*buf);
+	kk
 	//Share Value를 읽어들입니다. 만약 못 찾으면 무한대 리턴
 	int findShare(const char* buf);
-
-
-private:
 	
 
+private:
+	char buf_Receive[BUFSIZE];
+	char buf_Send[BUFSIZE];
+	
 };
