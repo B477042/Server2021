@@ -1,9 +1,9 @@
 #include "MultiThreadServer.h"
 
 
- int  MultiThreadServer::share = 0;
+ int  UMultiThreadServer::share = 0;
 
-MultiThreadServer::MultiThreadServer()
+UMultiThreadServer::UMultiThreadServer()
 {
 	waitTimer = 0;
 	bPower = true;
@@ -18,7 +18,7 @@ MultiThreadServer::MultiThreadServer()
 
 
 
-int MultiThreadServer::initServer()
+int UMultiThreadServer::initServer()
 {
 	// 윈속 초기화
 	WSADATA wsa;
@@ -38,14 +38,14 @@ int MultiThreadServer::initServer()
 	return 0;
 }
 
-int MultiThreadServer::RunMultiThreadServer()
+int UMultiThreadServer::RunMultiThreadServer()
 {
 	//Wait Thread 생성
 	hThread[Idx_Wait] = (HANDLE)
 		_beginthreadex(
 			NULL,
 			0,
-			MultiThreadServer::procWait,
+			UMultiThreadServer::procWait,
 			this,
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[Idx_Wait]
@@ -61,7 +61,7 @@ int MultiThreadServer::RunMultiThreadServer()
 		_beginthreadex(
 			NULL,
 			0,
-			MultiThreadServer::procAccept,
+			UMultiThreadServer::procAccept,
 			this,
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[Idx_Accept]
@@ -83,7 +83,7 @@ int MultiThreadServer::RunMultiThreadServer()
 	return 0;
 }
 
-int MultiThreadServer::closeServer()
+int UMultiThreadServer::closeServer()
 {
 
 	// closesocket()
@@ -99,7 +99,7 @@ int MultiThreadServer::closeServer()
 	return 0;
 }
 
-void MultiThreadServer::createServerSocket()
+void UMultiThreadServer::createServerSocket()
 {
 	int retval;
 
@@ -136,13 +136,13 @@ void MultiThreadServer::createServerSocket()
 	- 클라이언트와 연결된 쓰레드가 없다면 타이머를 돌린다. 
 	- 연결된 상태라면 쓰레드를 굴린다. 
 */
-unsigned int __stdcall MultiThreadServer::procWait(LPVOID lpParam)
+unsigned int __stdcall UMultiThreadServer::procWait(LPVOID lpParam)
 {
 	
 
 
 //	cout << "\n====procWait Thread id : " << this_thread::get_id() << "========" << endl;
-	auto server = (MultiThreadServer*)lpParam;
+	auto server = (UMultiThreadServer*)lpParam;
 	if (!server) {
 		cout << " Casting Failed : procWait" << endl;
 	}
@@ -196,10 +196,10 @@ unsigned int __stdcall MultiThreadServer::procWait(LPVOID lpParam)
 
 
 //Power 내려가면 꺼진다
-unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
+unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 {
 	//cout << "\n====proc Accept Thread id : " << this_thread::get_id() << "========" << endl;
-	auto server = (MultiThreadServer*)lpParam;
+	auto server = (UMultiThreadServer*)lpParam;
 	if (!server) {
 		cout << " Casting Failed : procAccept" << endl;
 	}
@@ -248,7 +248,7 @@ unsigned int __stdcall  MultiThreadServer::procAccept(LPVOID lpParam)
 	return 0;
 }
 
-unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
+unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 {
 	
 	auto Data = (FCommunicationData*)lpParam;
@@ -336,7 +336,7 @@ unsigned int __stdcall  MultiThreadServer::procCommunication(LPVOID lpParam)
 
 
 
-bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
+bool UMultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 {
 	auto Data = (FCommunicationData*)inputParam;
 
@@ -366,7 +366,7 @@ bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 		_beginthreadex(
 			NULL,
 			0,
-			MultiThreadServer::procCommunication,
+			UMultiThreadServer::procCommunication,
 			(LPVOID)(Data),
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[idx_t]
@@ -386,7 +386,7 @@ bool MultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 
 
 //
-FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
+FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 {
 	//예외처리 - 수용인원보다 더 많은 클라이언트가 접속 시도시
 	//		   - power가 꺼졌을 때
@@ -444,7 +444,7 @@ FClientSocket* MultiThreadServer::acceptSocket(SOCKET * sock)
 	return clientSocket;
 }
 
-bool MultiThreadServer::receiveData(FClientSocket* cs)
+bool UMultiThreadServer::receiveData(FClientSocket* cs)
 {
 	//EnterCriticalSection(&hCriticalSection);
 	//EnterCriticalSection(&hCS_ReceiveData);
@@ -468,7 +468,7 @@ bool MultiThreadServer::receiveData(FClientSocket* cs)
 	return true;
 }
 
-bool MultiThreadServer::sendData(FClientSocket * cs)
+bool UMultiThreadServer::sendData(FClientSocket * cs)
 {
 	//EnterCriticalSection(&hCriticalSection);
 //	EnterCriticalSection(&hCS_SendData);
@@ -488,7 +488,7 @@ bool MultiThreadServer::sendData(FClientSocket * cs)
 	return true;
 }
 
-void MultiThreadServer::addAditionalText(char * inputBuf, const char * text, int & retval)
+void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, int & retval)
 {
 	if (!inputBuf) { printf("nullptr\n"); return; }
 
@@ -502,7 +502,7 @@ void MultiThreadServer::addAditionalText(char * inputBuf, const char * text, int
 
 }
 
-void MultiThreadServer::sendShare(FClientSocket * cs)
+void UMultiThreadServer::sendShare(FClientSocket * cs)
 {
 	//buf값 초기화
 	memset(cs->buf, 0, sizeof cs->buf);
@@ -530,7 +530,7 @@ void MultiThreadServer::sendShare(FClientSocket * cs)
 
 }
 
-int MultiThreadServer::addClient()
+int UMultiThreadServer::addClient()
 {
 	++n_Client;
 	int retval = remainThreadSlot.front();
@@ -538,7 +538,7 @@ int MultiThreadServer::addClient()
 	return retval;
 }
 
-int MultiThreadServer::removeClient(int num)
+int UMultiThreadServer::removeClient(int num)
 {
 	if (num < Idx_thread || num >= NUM_OF_THREAD)
 		return -1;
@@ -549,7 +549,7 @@ int MultiThreadServer::removeClient(int num)
 }
 
 //// num_of_thread보다 더 많이 들어가는걸 방지한다
-//bool MultiThreadServer::checkThreadSpace()
+//bool UMultiThreadServer::checkThreadSpace()
 //{
 //	int dwLeng =sizeof dwThreadId/sizeof dwThreadId[0] ;
 //	int hLeng = sizeof hThread / sizeof hThread[0];
@@ -569,7 +569,7 @@ int MultiThreadServer::removeClient(int num)
 //	return true;
 //}
 
-void MultiThreadServer::printCurrentTime()
+void UMultiThreadServer::printCurrentTime()
 {
 	auto stime = std::chrono::system_clock::now();
 	auto mill = std::chrono::duration_cast<std::chrono::milliseconds>(stime.time_since_epoch());

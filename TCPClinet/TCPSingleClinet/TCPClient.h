@@ -10,6 +10,9 @@
 #include <limits>
 #include <algorithm>
 #include <thread>
+#include <Windows.h>
+#include <process.h>
+#include <tchar.h>
 using namespace std;
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
@@ -28,11 +31,6 @@ static void err_quit(const char* msg);
 static void err_display(const char* msg);
 
 
-typedef struct F
-{
-
-};
-
 
 class UTCPClient
 {
@@ -47,9 +45,10 @@ public:
 
 private:
 
-	static unsigned int WINAPI procRecieve(LPVOID IpParam);
-	static unsigned int WINAPI procSend(LPVOID IpParam);
 
+	//Input으로 socket 넘겨줄 것
+	static unsigned int WINAPI procSend(LPVOID IpParam);
+	static unsigned int WINAPI procRecieve(LPVOID IpParam);
 
 	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
 	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
@@ -62,13 +61,20 @@ private:
 
 	//Buffer에 적힌 내용들을 다 지워줍니다.
 	void clearBuffer(char*buf);
-	kk
+
 	//Share Value를 읽어들입니다. 만약 못 찾으면 무한대 리턴
 	int findShare(const char* buf);
 	
 
+
+
 private:
-	char buf_Receive[BUFSIZE];
-	char buf_Send[BUFSIZE];
+	static char buf_Send[BUFSIZE];
+	static char buf_Receive[BUFSIZE];
+
+	DWORD dwThreadId[NUM_OF_THREAD];
+
+	HANDLE hThread[NUM_OF_THREAD];
+
 	
 };

@@ -31,10 +31,16 @@ void err_display(const char* msg)
 }
 
 
+char UTCPClient::buf_Send[BUFSIZE] = "0";
+char UTCPClient::buf_Receive[BUFSIZE] = "0";
 UTCPClient::UTCPClient()
 {
-	
+	clearBuffer(UTCPClient::buf_Send);
+	clearBuffer(UTCPClient::buf_Receive);
 }
+
+
+
 
 int UTCPClient::RunClient()
 {
@@ -62,35 +68,81 @@ int UTCPClient::RunClient()
 	char buf[BUFSIZE + 1] = "";
 	int len;
 
-	// 서버와 데이터 통신
-	while (1) {
-		// 데이터 입력
-		printf("\n[보낼 데이터] ");
-		if (fgets(buf, BUFSIZE + 1, stdin) == NULL)
-			break;
 
-		// '\n' 문자 제거
-		len = strlen(buf);
-		if (buf[len - 1] == '\n')
-			buf[len - 1] = '\0';
-		if (strlen(buf) == 0)
-			break;
-		
-
-		
-		//데이터 보내고 받기
-		sendData(retval, sock, buf, strlen(buf), 0);
-		receiveData(retval, sock, buf, BUFSIZE, 0);
-		//receiveData(retval, sock, buf, BUFSIZE, 0);
-
-		////텍스트 추가
-		//addAditionalText(buf, " from Client");
-
-		////데이터 보내고 받기
-		//sendData(retval, sock, buf, strlen(buf), 0);
-		//receiveData(retval, sock, buf, BUFSIZE, 0);
-
+	//송신 스레드 생성
+	hThread[Idx_Send] = (HANDLE)
+		_beginthreadex(
+			NULL,
+			0,
+			UTCPClient::procSend,
+			(LPVOID)(sock),
+			CREATE_SUSPENDED,
+			(unsigned *)&dwThreadId[Idx_Send]
+		);
+	if (hThread[Idx_Send] == NULL)
+	{
+		_tprintf(_T("Thread creation fault! \n"));
+		return -1;
 	}
+	//수신 스레드 생성
+	hThread[Idx_Receive] = (HANDLE)
+		_beginthreadex(
+			NULL,
+			0,
+			UTCPClient::procRecieve,
+			NULL,
+			CREATE_SUSPENDED,
+			(unsigned *)&dwThreadId[Idx_Receive]
+		);
+	if (hThread[Idx_Receive] == NULL)
+	{
+		_tprintf(_T("Thread creation fault! \n"));
+		return -1;
+	}
+
+
+	ResumeThread(hThread[Idx_Send]);
+	ResumeThread(hThread[Idx_Receive]);
+	
+	WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+
+
+
+	//// 서버와 데이터 통신
+	//while (1) {
+	//	// 데이터 입력
+	//	printf("\n[보낼 데이터] ");
+	//	if (fgets(buf, BUFSIZE + 1, stdin) == NULL)
+	//		break;
+
+	//	// '\n' 문자 제거
+	//	len = strlen(buf);
+	//	if (buf[len - 1] == '\n')
+	//		buf[len - 1] = '\0';
+	//	if (strlen(buf) == 0)
+	//		break;
+	//	
+
+	//	
+	//	//데이터 보내고 받기
+	//	sendData(retval, sock, buf, strlen(buf), 0);
+	//	receiveData(retval, sock, buf, BUFSIZE, 0);
+	//	//receiveData(retval, sock, buf, BUFSIZE, 0);
+
+	//	////텍스트 추가
+	//	//addAditionalText(buf, " from Client");
+
+	//	////데이터 보내고 받기
+	//	//sendData(retval, sock, buf, strlen(buf), 0);
+	//	//receiveData(retval, sock, buf, BUFSIZE, 0);
+
+	//}
+
+
+
+
+
+
 
 	// closesocket()
 	closesocket(sock);
@@ -100,15 +152,71 @@ int UTCPClient::RunClient()
 	return 0;
 }
 
-unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
+unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 {
+
+	auto sock = (SOCKET)IpParam;
+	if (!sock)return false;
+
+
+
+	//전송한 문자열의 길이가 된다
+	int retval = 0;
+	int len = 0;
+
+	// 서버와 데이터 통신
+	while (1) {
+		// 데이터 입력
+		printf("\n[보낼 데이터] ");
+		if (fgets(buf_Send, BUFSIZE + 1, stdin) == NULL)
+			break;
+
+		// '\n' 문자 제거
+		len = strlen(buf_Send);
+		if (buf_Send[len - 1] == '\n')
+			buf_Send[len - 1] = '\0';
+		if (strlen(buf_Send) == 0)
+			break;
+
+
+
+		//데이터 보내기
+		retval = send(sock, buf_Send, strlen(buf_Send), 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+			return false;
+		}
+		printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
+	}
+
 	return 0;
 }
 
-unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
+
+unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 {
-	return 0;
+
+	auto sock = (SOCKET)IpParam;
+	if (!sock)return false;
+
+
+	int retval=0;
+	retval = recv(sock, buf_Receive, BUFSIZE, 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("recv()");
+		return false;
+	}
+	else if (retval == 0)
+		return false;
+
+
+	// 받은 데이터 출력
+	//buf[retval] = '\0';
+	printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
+	printf("[받은 데이터] %s\t\n", buf_Receive);
+	return true;
 }
+
 
 bool UTCPClient::sendData(int&retval, SOCKET & sock, char * buf, int length, int flags)
 {

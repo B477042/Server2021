@@ -5,7 +5,7 @@ int _tmain(int argc, TCHAR* argv[])
 {
 	
 	cout << "hi" << endl;
-	MultiThreadServer server;
+	UMultiThreadServer server;
 	if (server.initServer() != 0)
 	{
 		cout << "Fail to Init Server" << endl;

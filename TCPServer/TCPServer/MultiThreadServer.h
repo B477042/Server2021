@@ -63,7 +63,7 @@ static void err_display(const char* msg)
 	LocalFree(lpMsgBuf);
 }
 
-class MultiThreadServer;
+class UMultiThreadServer;
 
 //클라이언트와 통신을 위한 클라이언트 소켓의 정보 저장 구조체. 
 typedef struct FClientSocket
@@ -87,7 +87,7 @@ public:
 	//~FCommunicationData() { cout << "\ngood bye" << endl; }
 
 
-	MultiThreadServer* Server;
+	UMultiThreadServer* Server;
 
 	//통신하게 될 Thread의 idx
 	int idx_Thread;
@@ -97,11 +97,11 @@ public:
 
 
 
-class MultiThreadServer
+class UMultiThreadServer
 {
 public:
 
-	MultiThreadServer();
+	UMultiThreadServer();
 
 	
 	//winsock 초기화 + 서버 소켓 생성, 크리티컬 섹션 초기화. 성공시 0 반환
