@@ -33,10 +33,12 @@ void err_display(const char* msg)
 
 char UTCPClient::buf_Send[BUFSIZE] = "0";
 char UTCPClient::buf_Receive[BUFSIZE] = "0";
+bool UTCPClient::bIsNewMessage = false;
 UTCPClient::UTCPClient()
 {
 	clearBuffer(UTCPClient::buf_Send);
 	clearBuffer(UTCPClient::buf_Receive);
+	InitializeCriticalSection(&hCritical);
 }
 
 
@@ -66,7 +68,7 @@ int UTCPClient::RunClient()
 
 	// 데이터 통신에 사용할 변수
 	char buf[BUFSIZE + 1] = "";
-	int len;
+	
 
 
 	//송신 스레드 생성
@@ -90,7 +92,7 @@ int UTCPClient::RunClient()
 			NULL,
 			0,
 			UTCPClient::procRecieve,
-			NULL,
+			(LPVOID)(sock),
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[Idx_Receive]
 		);
@@ -146,6 +148,7 @@ int UTCPClient::RunClient()
 
 	// closesocket()
 	closesocket(sock);
+	DeleteCriticalSection(&hCritical);
 	printf("Colse Socket\n");
 	// 윈속 종료
 	WSACleanup();
@@ -166,6 +169,7 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 
 	// 서버와 데이터 통신
 	while (1) {
+	
 		// 데이터 입력
 		printf("\n[보낼 데이터] ");
 		if (fgets(buf_Send, BUFSIZE + 1, stdin) == NULL)
@@ -186,7 +190,12 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 			err_display("send()");
 			return false;
 		}
+		//출력 문구가 겹치는 것을 방지하기 위해서
+		EnterCriticalSection(&hCritical);
 		printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
+		LeaveCriticalSection(&hCritical);
+		//Receieve 함수 출력을 위해 잠시 쉬어줍니다.
+		Sleep(66);
 	}
 
 	return 0;
@@ -201,19 +210,30 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 
 
 	int retval=0;
-	retval = recv(sock, buf_Receive, BUFSIZE, 0);
-	if (retval == SOCKET_ERROR) {
-		err_display("recv()");
-		return false;
+	while (1)
+	{
+		
+		clearBuffer(buf_Receive);
+		retval = recv(sock, buf_Receive, BUFSIZE, 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("recv()");
+			return false;
+		}
+		else if (retval == 0)
+			return false;
+		EnterCriticalSection(&hCritical);
+
+		// 받은 데이터 출력
+		//buf[retval] = '\0';
+		printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
+		printf("[받은 데이터] %s\t\n", buf_Receive);
+		int share = findShare(UTCPClient::buf_Receive);
+		if(share!=INT_MAX)
+		share += 10;
+
+		LeaveCriticalSection(&hCritical);
 	}
-	else if (retval == 0)
-		return false;
-
-
-	// 받은 데이터 출력
-	//buf[retval] = '\0';
-	printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
-	printf("[받은 데이터] %s\t\n", buf_Receive);
+	
 	return true;
 }
 
@@ -333,15 +353,40 @@ void UTCPClient::clearBuffer(char * buf)
 
 int UTCPClient::findShare(const char* buf)
 {
-	//찾는데 실패하면 리턴
-	int infinity = INT_MAX;
+	//찾는데 실패하면 무한으로 리턴
+	int value= INT_MAX;
+	//Share value string
+	char* valueStr;
 	
+	for (int i = 0; i < sizeof(buf); ++i)
+	{
+		if (buf[i] == '=')
+		{
+			int valueLen = sizeof(buf) - i - 1;
+			//숫자 자리 수 만큼 공간 확보
+			valueStr = new char[valueLen];
+
+			//i는 =의 위치니까 다음 칸부터
+			memcpy(valueStr, buf + i+1, valueLen);
+
+			//share값을 찾았으니
+			bIsNewMessage = true;
+
+			//string to int
+			value = atoi(valueStr);
+			printf("\nfind : %d\n",value);
+
+
+			delete[] valueStr;
+			break;
+		}
+	}
 	
+	//value += 10;
 
 
 
-
-	return 0;
+	return value;
 }
 
 

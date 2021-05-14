@@ -30,7 +30,7 @@ using namespace std;
 static void err_quit(const char* msg);
 static void err_display(const char* msg);
 
-
+static CRITICAL_SECTION hCritical;
 
 class UTCPClient
 {
@@ -60,10 +60,10 @@ private:
 
 
 	//Buffer에 적힌 내용들을 다 지워줍니다.
-	void clearBuffer(char*buf);
+	static void clearBuffer(char*buf);
 
 	//Share Value를 읽어들입니다. 만약 못 찾으면 무한대 리턴
-	int findShare(const char* buf);
+	static int findShare(const char* buf);
 	
 
 
@@ -71,6 +71,11 @@ private:
 private:
 	static char buf_Send[BUFSIZE];
 	static char buf_Receive[BUFSIZE];
+
+	//share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
+	static bool bIsNewMessage;
+
+
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 

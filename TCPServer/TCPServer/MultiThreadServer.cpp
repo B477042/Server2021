@@ -30,8 +30,8 @@ int UMultiThreadServer::initServer()
 
 	InitializeCriticalSection(&hCS_ProcAccept);
 	InitializeCriticalSection(&hCS_AcceptSocket);
-	InitializeCriticalSection(&hCS_ReceiveData);
-	InitializeCriticalSection(&hCS_SendData);
+	
+	
 	InitializeCriticalSection(&hCS_DeleteCS);
 
 
@@ -91,8 +91,8 @@ int UMultiThreadServer::closeServer()
 
 	DeleteCriticalSection(&hCS_ProcAccept);
 	DeleteCriticalSection(&hCS_AcceptSocket);
-	DeleteCriticalSection(&hCS_ReceiveData);
-	DeleteCriticalSection(&hCS_SendData);
+
+
 	DeleteCriticalSection(&hCS_DeleteCS);
 	// 윈속 종료
 	WSACleanup();
@@ -447,7 +447,7 @@ FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 bool UMultiThreadServer::receiveData(FClientSocket* cs)
 {
 	//EnterCriticalSection(&hCriticalSection);
-	//EnterCriticalSection(&hCS_ReceiveData);
+	
 	// 데이터 받기
 	cs->retval = recv(cs->sock, cs->buf, BUFSIZE, 0);
 	if (cs->retval == SOCKET_ERROR) {
@@ -464,14 +464,14 @@ bool UMultiThreadServer::receiveData(FClientSocket* cs)
 		ntohs(cs->addr.sin_port), cs->buf);
 
 	//LeaveCriticalSection(&hCriticalSection);
-	//LeaveCriticalSection(&hCS_ReceiveData);
+	
 	return true;
 }
 
 bool UMultiThreadServer::sendData(FClientSocket * cs)
 {
 	//EnterCriticalSection(&hCriticalSection);
-//	EnterCriticalSection(&hCS_SendData);
+
 
 	//문구 추가
 	addAditionalText(cs->buf, " from Server", cs->retval);
@@ -480,11 +480,11 @@ bool UMultiThreadServer::sendData(FClientSocket * cs)
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
 		//LeaveCriticalSection(&hCriticalSection);
-		LeaveCriticalSection(&hCS_SendData);
+	
 		return false;
 	}
 	//LeaveCriticalSection(&hCriticalSection);
-	//LeaveCriticalSection(&hCS_SendData);
+	
 	return true;
 }
 
@@ -520,7 +520,7 @@ void UMultiThreadServer::sendShare(FClientSocket * cs)
 	memcpy(cs->buf, message, sizeof(message));
 
 	printf("\nSend Message : %s\n", message);
-	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
+	cs->retval = send(cs->sock, cs->buf, sizeof(cs->buf), 0);
 	if (cs->retval == SOCKET_ERROR)
 	{
 		err_display("send()");

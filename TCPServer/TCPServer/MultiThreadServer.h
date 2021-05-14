@@ -195,8 +195,8 @@ private:
 
 	CRITICAL_SECTION   hCS_ProcAccept;
 	CRITICAL_SECTION   hCS_AcceptSocket;
-	CRITICAL_SECTION   hCS_ReceiveData;
-	CRITICAL_SECTION   hCS_SendData;
+
+
 	CRITICAL_SECTION   hCS_DeleteCS;
 };
 
