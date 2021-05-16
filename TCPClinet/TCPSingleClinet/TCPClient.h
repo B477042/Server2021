@@ -27,10 +27,36 @@ using namespace std;
 
 
 
+class UTCPClient;
 static void err_quit(const char* msg);
 static void err_display(const char* msg);
 
-static CRITICAL_SECTION hCritical;
+
+
+//전역변수/함수 호출을 줄이기 위해서 만든 구조체
+typedef struct FConnectionData
+{
+public:
+	UTCPClient* Client;
+	SOCKET Sock;
+
+}ConnectionData;
+
+
+
+
+//송수신 과정에서 사용되는 구조체
+//송수신 하고 싶은 데이터들을 담습니다
+typedef struct FCommunicationData
+{
+public:
+	char buf_Message[BUFSIZE + 1] = "";
+	char buf_IP[BUFSIZE + 1] = "";
+	int Share;
+}CommunicationData;
+
+
+
 
 class UTCPClient
 {
@@ -50,8 +76,8 @@ private:
 	static unsigned int WINAPI procSend(LPVOID IpParam);
 	static unsigned int WINAPI procRecieve(LPVOID IpParam);
 
-	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
-	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
+//	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
+//	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
 
 
 	int recvn(SOCKET s, char* buf, int len, int flags);
@@ -63,23 +89,26 @@ private:
 	static void clearBuffer(char*buf);
 
 	//Share Value를 읽어들입니다. 만약 못 찾으면 무한대 리턴
-	static int findShare(const char* buf);
+	//static int findShare(const char* buf);
 	
+	//https://www.tutorialspoint.com/how-to-get-the-ip-address-of-local-computer-using-c-cplusplus
+	static const char* getIPAdrress();
+
 
 
 
 private:
-	static char buf_Send[BUFSIZE];
-	static char buf_Receive[BUFSIZE];
+	/*static char buf_Send[BUFSIZE];
+	static char buf_Receive[BUFSIZE];*/
 
-	//share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
-	static bool bIsNewMessage;
+	//Share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
+	bool bIsNewMessage;
 
-
+	FCommunicationData* communicationData;
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 
 	HANDLE hThread[NUM_OF_THREAD];
 
-	
+	CRITICAL_SECTION hCritical;
 };

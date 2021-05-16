@@ -72,7 +72,7 @@ public:
 	SOCKET sock;
 	SOCKADDR_IN addr;
 	int retval;
-	char buf[BUFSIZE + 1] = "";
+
 	
 
 }ClentsSocket;
@@ -80,11 +80,11 @@ public:
 
 //송수신 과정에서 사용되는 구조체. 
 //*연결될 Client Socket과 이용하는 쓰레드 idx가 있다
-typedef struct FCommunicationData
+typedef struct FConnectionData
 {
 public:
 	//소멸 테스트
-	//~FCommunicationData() { cout << "\ngood bye" << endl; }
+	//~FConnectionData() { cout << "\ngood bye" << endl; }
 
 
 	UMultiThreadServer* Server;
@@ -93,6 +93,17 @@ public:
 	int idx_Thread;
 	//ClientSockets의 포인터
 	ClentsSocket* idx_Sockets;
+}ConnectionData;
+
+//송수신 과정에서 사용되는 구조체
+//송수신 하고 싶은 데이터들을 담습니다
+typedef struct FCommunicationData
+{
+	public:
+		char buf_Message[BUFSIZE + 1] = "";
+		char buf_IP[BUFSIZE + 1] = "";
+		int Share;
+
 }CommunicationData;
 
 
@@ -138,14 +149,14 @@ private:
 	//클라이언트 accept
 	FClientSocket* acceptSocket(SOCKET* sock);
 	//해당 클라이언트로부터 데이터 수신
-	bool receiveData(FClientSocket* cs);
+	bool receiveData(FClientSocket* cs, FCommunicationData* cd);
 	//해당 클라이언트로 데이터 전송
-	bool sendData(FClientSocket*cs);
+	bool sendData(FClientSocket*cs, FCommunicationData* cd);
 	//원하는 문구를 추가
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
 	//==============Share Value 관련 함수===========
-	//클라이언트로 클라이언트 ip와 share 값을 넘겨준다
+	//클라이언트로 클라이언트 ip와 Share 값을 넘겨준다
 	void sendShare(FClientSocket*cs);
 	void receiveShare(FClientSocket* cs);
 
@@ -189,14 +200,13 @@ private:
 
 	
 
-	//공유 데이터 share, 0으로 초기화
-	static int share;
+	//공유 데이터 Share, 0으로 초기화
+	static int Share;
 
 
-	CRITICAL_SECTION   hCS_ProcAccept;
-	CRITICAL_SECTION   hCS_AcceptSocket;
-
-
-	CRITICAL_SECTION   hCS_DeleteCS;
+	CRITICAL_SECTION	hCS_ProcAccept;
+	CRITICAL_SECTION	hCS_AcceptSocket;
+	CRITICAL_SECTION	hcs_ReceiveData;
+	CRITICAL_SECTION	hCS_DeleteCS;
 };
 

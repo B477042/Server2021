@@ -179,7 +179,7 @@ void USingleTCPServer::acceptSocket(SOCKET* sock)
 bool USingleTCPServer::receiveData(FClientSocket* cs)
 {
 	// 데이터 받기
-	cs->retval = recv(cs->sock, cs->buf, BUFSIZE, 0);
+	cs->retval = recv(cs->sock, cs->buf_Message, BUFSIZE, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("recv()");
 		return false;
@@ -189,9 +189,9 @@ bool USingleTCPServer::receiveData(FClientSocket* cs)
 
 
 	// 받은 데이터 출력
-	cs->buf[cs->retval] = '\0';
+	cs->buf_Message[cs->retval] = '\0';
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
-		ntohs(cs->addr.sin_port), cs->buf);
+		ntohs(cs->addr.sin_port), cs->buf_Message);
 	
 
 	return true;
@@ -202,10 +202,10 @@ bool USingleTCPServer::sendData(FClientSocket * cs)
 	
 
 	//문구 추가
-	addAditionalText(cs->buf, " from Server", cs->retval);
+	addAditionalText(cs->buf_Message, " from Server", cs->retval);
 
 	// 데이터 보내기
-	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
+	cs->retval = send(cs->sock, cs->buf_Message, cs->retval, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
 		return false;

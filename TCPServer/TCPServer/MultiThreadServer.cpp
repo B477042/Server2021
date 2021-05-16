@@ -1,7 +1,7 @@
 #include "MultiThreadServer.h"
 
 
- int  UMultiThreadServer::share = 0;
+ int  UMultiThreadServer::Share = 0;
 
 UMultiThreadServer::UMultiThreadServer()
 {
@@ -31,7 +31,7 @@ int UMultiThreadServer::initServer()
 	InitializeCriticalSection(&hCS_ProcAccept);
 	InitializeCriticalSection(&hCS_AcceptSocket);
 	
-	
+	InitializeCriticalSection(&hcs_ReceiveData);
 	InitializeCriticalSection(&hCS_DeleteCS);
 
 
@@ -91,7 +91,7 @@ int UMultiThreadServer::closeServer()
 
 	DeleteCriticalSection(&hCS_ProcAccept);
 	DeleteCriticalSection(&hCS_AcceptSocket);
-
+	DeleteCriticalSection(&hcs_ReceiveData);
 
 	DeleteCriticalSection(&hCS_DeleteCS);
 	// 윈속 종료
@@ -216,7 +216,7 @@ unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 		if (!cSocket) { /*cout << "cSocket is nullptr" << endl;*/ continue; }
 
 
-		FCommunicationData* Data = new FCommunicationData();
+		FConnectionData* Data = new FConnectionData();
 		int idx_t=-1;
 		Data->Server = server;
 		Data->idx_Sockets = cSocket;
@@ -251,7 +251,7 @@ unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 {
 	
-	auto Data = (FCommunicationData*)lpParam;
+	auto Data = (FConnectionData*)lpParam;
 
 	if (!Data)
 	{
@@ -269,6 +269,11 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	auto server = Data->Server;
 	auto socket = Data->idx_Sockets;
 
+	FCommunicationData* CD= new FCommunicationData();
+	memset(CD->buf_Message,0,BUFSIZE+1);
+	memset(CD->buf_IP, 0, BUFSIZE + 1);
+	CD->Share = Share;
+
 	//데이터 송수신 상태
 	while (1)
 	{
@@ -277,7 +282,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//수신
 		
-		if (server->receiveData(socket) == false)
+		if (server->receiveData(socket,CD) == false)
 		{
 				bResult = false;
 				
@@ -287,13 +292,13 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//송신
 		
-		if (server->sendData(socket) == false)
+		if (server->sendData(socket,CD) == false)
 		{
 			bResult = false;
 			
 		}
 
-		server->sendShare(socket);
+		//server->sendShare(socket);
 
 
 	}
@@ -326,7 +331,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 	LeaveCriticalSection(&server->hCS_DeleteCS);
 		delete Data;
-		
+		delete CD;
 
 	
 	
@@ -338,7 +343,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 bool UMultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 {
-	auto Data = (FCommunicationData*)inputParam;
+	auto Data = (FConnectionData*)inputParam;
 
 
 	if (!Data)
@@ -444,12 +449,12 @@ FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	return clientSocket;
 }
 
-bool UMultiThreadServer::receiveData(FClientSocket* cs)
+bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
 {
-	//EnterCriticalSection(&hCriticalSection);
+	EnterCriticalSection(&hcs_ReceiveData);
 	
 	// 데이터 받기
-	cs->retval = recv(cs->sock, cs->buf, BUFSIZE, 0);
+	cs->retval = recv(cs->sock,(char*) cd, sizeof(CommunicationData), 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("recv()");
 		return false;
@@ -458,31 +463,51 @@ bool UMultiThreadServer::receiveData(FClientSocket* cs)
 		return false;
 
 
-	// 받은 데이터 출력
-	cs->buf[cs->retval] = '\0';
+	// 받은 메시지 데이터 출력
+	cd->buf_Message[strlen(cd->buf_Message)] = '\0';
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
-		ntohs(cs->addr.sin_port), cs->buf);
+		ntohs(cs->addr.sin_port), cd->buf_Message);
 
-	//LeaveCriticalSection(&hCriticalSection);
+	printf("[TCP/%s:%d] 클라이언트 IP : %s\tShare = %d\n", inet_ntoa(cs->addr.sin_addr),
+		ntohs(cs->addr.sin_port), cd->buf_IP,cd->Share);
+
+	Share = cd->Share;
+
+
+	//memset(cd->buf_Message, 0, BUFSIZE + 1);
+	//memset(cd->buf_IP, 0, BUFSIZE + 1);
+
+
+	LeaveCriticalSection(&hcs_ReceiveData);
 	
+	
+
+
 	return true;
 }
 
-bool UMultiThreadServer::sendData(FClientSocket * cs)
+bool UMultiThreadServer::sendData(FClientSocket * cs, FCommunicationData* cd)
 {
 	//EnterCriticalSection(&hCriticalSection);
 
 
 	//문구 추가
-	addAditionalText(cs->buf, " from Server", cs->retval);
-	// 메시지 보내기
-	cs->retval = send(cs->sock, cs->buf, cs->retval, 0);
+	addAditionalText(cd->buf_Message, " from Server", cs->retval);
+	//Share값 추가
+	cd->Share = Share;
+
+	// 데이터 보내기
+	cs->retval = send(cs->sock, (char*)cd, cs->retval, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
 		//LeaveCriticalSection(&hCriticalSection);
 	
 		return false;
 	}
+
+	
+
+
 	//LeaveCriticalSection(&hCriticalSection);
 	
 	return true;
@@ -501,34 +526,34 @@ void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, in
 
 
 }
-
-void UMultiThreadServer::sendShare(FClientSocket * cs)
-{
-	//buf값 초기화
-	memset(cs->buf, 0, sizeof cs->buf);
-	////Client ip주소 써주기
-	//addAditionalText(cs->buf, inet_ntoa(cs->addr.sin_addr), cs->retval);
-	////share text 써주기
-	//addAditionalText(cs->buf, " share=", cs->retval);
-
-	////Test value 10
-	//addAditionalText(cs->buf, "10", cs->retval);
-
-	//보낼 메시지 작성
-	char message[BUFSIZE];
-	sprintf(message, "%s share=10", inet_ntoa(cs->addr.sin_addr));
-	memcpy(cs->buf, message, sizeof(message));
-
-	printf("\nSend Message : %s\n", message);
-	cs->retval = send(cs->sock, cs->buf, sizeof(cs->buf), 0);
-	if (cs->retval == SOCKET_ERROR)
-	{
-		err_display("send()");
-
-	}
-
-
-}
+//
+//void UMultiThreadServer::sendShare(FClientSocket * cs)
+//{
+//	//buf_Message값 초기화
+//	memset(cs->buf_Message, 0, sizeof cs->buf_Message);
+//	////Client ip주소 써주기
+//	//addAditionalText(cs->buf_Message, inet_ntoa(cs->addr.sin_addr), cs->retval);
+//	////Share text 써주기
+//	//addAditionalText(cs->buf_Message, " Share=", cs->retval);
+//
+//	////Test value 10
+//	//addAditionalText(cs->buf_Message, "10", cs->retval);
+//
+//	//보낼 메시지 작성
+//	char message[BUFSIZE];
+//	sprintf(message, "%s Share=10", inet_ntoa(cs->addr.sin_addr));
+//	memcpy(cs->buf_Message, message, strlen(message));
+//
+//	printf("\nSend Message : %s\n", message);
+//	cs->retval = send(cs->sock, cs->buf_Message, strlen(cs->buf_Message), 0);
+//	if (cs->retval == SOCKET_ERROR)
+//	{
+//		err_display("send()");
+//
+//	}
+//
+//
+//}
 
 int UMultiThreadServer::addClient()
 {

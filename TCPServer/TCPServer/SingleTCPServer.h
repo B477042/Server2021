@@ -51,7 +51,7 @@ public:
 	SOCKET sock;
 	SOCKADDR_IN addr;
 	int retval;
-	char buf[BUFSIZE + 1] = "";
+	char buf_Message[BUFSIZE + 1] = "";
 }ClentsSocket;
 
 
