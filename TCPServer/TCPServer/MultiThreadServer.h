@@ -100,6 +100,7 @@ public:
 typedef struct FCommunicationData
 {
 	public:
+		
 		char buf_Message[BUFSIZE + 1] = "";
 		char buf_IP[BUFSIZE + 1] = "";
 		int Share;
@@ -156,9 +157,8 @@ private:
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
 	//==============Share Value 관련 함수===========
-	//클라이언트로 클라이언트 ip와 Share 값을 넘겨준다
-	void sendShare(FClientSocket*cs);
-	void receiveShare(FClientSocket* cs);
+	//어떤 쓰레드에서든지 Share값이 변하면 호출된다. 변한 쉐어값을 모든 연결 클라이언트에게 보낸다.
+	void SyncShareValue();
 
 
 

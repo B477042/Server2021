@@ -50,6 +50,7 @@ public:
 typedef struct FCommunicationData
 {
 public:
+
 	char buf_Message[BUFSIZE + 1] = "";
 	char buf_IP[BUFSIZE + 1] = "";
 	int Share;

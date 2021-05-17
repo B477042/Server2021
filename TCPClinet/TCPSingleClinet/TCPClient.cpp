@@ -36,6 +36,9 @@ UTCPClient::UTCPClient()
 {
 	
 	InitializeCriticalSection(&hCritical);
+
+
+	//printf("Size of struct : %d", sizeof(CommunicationData));
 }
 
 
@@ -117,35 +120,7 @@ int UTCPClient::RunClient()
 
 
 
-	//// 서버와 데이터 통신
-	//while (1) {
-	//	// 데이터 입력
-	//	printf("\n[보낼 데이터] ");
-	//	if (fgets(buf, BUFSIZE + 1, stdin) == NULL)
-	//		break;
 
-	//	// '\n' 문자 제거
-	//	len = strlen(buf);
-	//	if (buf[len - 1] == '\n')
-	//		buf[len - 1] = '\0';
-	//	if (strlen(buf) == 0)
-	//		break;
-	//	
-
-	//	
-	//	//데이터 보내고 받기
-	//	sendData(retval, CD, buf, strlen(buf), 0);
-	//	receiveData(retval, CD, buf, BUFSIZE, 0);
-	//	//receiveData(retval, CD, buf, BUFSIZE, 0);
-
-	//	////텍스트 추가
-	//	//addAditionalText(buf, " from Client");
-
-	//	////데이터 보내고 받기
-	//	//sendData(retval, CD, buf, strlen(buf), 0);
-	//	//receiveData(retval, CD, buf, BUFSIZE, 0);
-
-	//}
 
 
 
@@ -205,8 +180,10 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 
 		CD->Client->communicationData->Share += 10;
 
+
+
 		//데이터 보내기
-		retval = send(CD->Sock, (char*)(CD->Client->communicationData), sizeof(CD->Client->communicationData), 0);
+		retval = send(CD->Sock, (char*)(CD->Client->communicationData), sizeof(FCommunicationData), 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
 			return false;
@@ -250,14 +227,25 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 		//출력이 밀리는 것을 방지
 		EnterCriticalSection(&CD->Client->hCritical);
 
-		// 받은 데이터 출력
-		//buf[retval] = '\0';
-		printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
-		printf("[받은 데이터] %s\t\n", CD->Client->communicationData->buf_Message);
-		printf("[받은 데이터] %s\tShare = %d\n", CD->Client->communicationData->buf_IP, CD->Client->communicationData->Share);
-	
-	
+		//Share 값 동기화
+		if (retval < BUFSIZE)
+		{
+			CD->Client->communicationData->Share = atoi(CD->Client->communicationData->buf_Message);
+		}
 
+		else {
+			// 받은 데이터 출력
+		//buf[retval] = '\0';
+			printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
+			printf("[받은 데이터] %s\t\n", CD->Client->communicationData->buf_Message);
+			//	CD->Client->communicationData->Share = atoi(CD->Client->communicationData->Share);
+			printf("[받은 데이터] %s\tShare = %d\n", CD->Client->communicationData->buf_IP, CD->Client->communicationData->Share);
+
+
+
+
+		}
+		
 
 
 		LeaveCriticalSection(&CD->Client->hCritical);

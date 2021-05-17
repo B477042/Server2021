@@ -451,7 +451,7 @@ FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 
 bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
 {
-	EnterCriticalSection(&hcs_ReceiveData);
+
 	
 	// 데이터 받기
 	cs->retval = recv(cs->sock,(char*) cd, sizeof(CommunicationData), 0);
@@ -462,7 +462,7 @@ bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
 	else if (cs->retval == 0)
 		return false;
 
-
+	EnterCriticalSection(&hcs_ReceiveData);
 	// 받은 메시지 데이터 출력
 	cd->buf_Message[strlen(cd->buf_Message)] = '\0';
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
@@ -471,8 +471,9 @@ bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
 	printf("[TCP/%s:%d] 클라이언트 IP : %s\tShare = %d\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cd->buf_IP,cd->Share);
 
-	Share = cd->Share;
-
+	if(Share< cd->Share)
+		Share = cd->Share;
+	SyncShareValue();
 
 	//memset(cd->buf_Message, 0, BUFSIZE + 1);
 	//memset(cd->buf_IP, 0, BUFSIZE + 1);
@@ -493,18 +494,19 @@ bool UMultiThreadServer::sendData(FClientSocket * cs, FCommunicationData* cd)
 
 	//문구 추가
 	addAditionalText(cd->buf_Message, " from Server", cs->retval);
+	//printf("\ncd->share :%d \t share : %d\n", cd->Share, Share);
 	//Share값 추가
 	cd->Share = Share;
-
+	
 	// 데이터 보내기
-	cs->retval = send(cs->sock, (char*)cd, cs->retval, 0);
+	cs->retval = send(cs->sock, (char*)cd, sizeof(FCommunicationData), 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
 		//LeaveCriticalSection(&hCriticalSection);
 	
 		return false;
 	}
-
+//	printf("\ncd->share :%d \t share : %d\n", cd->Share, Share);
 	
 
 
@@ -525,6 +527,19 @@ void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, in
 	retval = strlen(inputBuf);
 
 
+}
+void UMultiThreadServer::SyncShareValue()
+{
+	char buf[255];
+	memset(buf, 0, 255);
+	_itoa_s(Share, buf,10);
+	//printf("in sync :%s", buf);
+	for (auto it : ClientSockets)
+	{
+		send(it->sock, buf, strlen(buf),0);
+	}
+
+	
 }
 //
 //void UMultiThreadServer::sendShare(FClientSocket * cs)
