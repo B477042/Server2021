@@ -66,7 +66,7 @@ static void err_display(const char* msg)
 class UMultiThreadServer;
 
 //클라이언트와 통신을 위한 클라이언트 소켓의 정보 저장 구조체. 
-typedef struct FClientSocket
+typedef struct ClientSocket
 {
 public:
 	SOCKET sock;
@@ -80,7 +80,7 @@ public:
 
 //송수신 과정에서 사용되는 구조체. 
 //*연결될 Client Socket과 이용하는 쓰레드 idx가 있다
-typedef struct FConnectionData
+typedef struct ConnectionData
 {
 public:
 	//소멸 테스트
@@ -97,15 +97,35 @@ public:
 
 //송수신 과정에서 사용되는 구조체
 //송수신 하고 싶은 데이터들을 담습니다
-typedef struct FCommunicationData
+typedef struct CommunicationData
 {
 	public:
-		
+	
 		char buf_Message[BUFSIZE + 1] = "";
 		char buf_IP[BUFSIZE + 1] = "";
 		int Share;
+	
 
 }CommunicationData;
+
+
+typedef struct HeaderUserInfo
+{
+public:
+	int messageLen;
+	int dataSize;
+
+}HeaderUserInfo;
+
+typedef struct UserInfoData
+{
+	int id;
+	int x;
+	int y;
+	int z;
+	//char* message;
+	char message[BUFSIZE];
+}UserInfoData;
 
 
 
@@ -148,11 +168,11 @@ private:
 
 	//============ 쓰레드내부 통신 함수 ============
 	//클라이언트 accept
-	FClientSocket* acceptSocket(SOCKET* sock);
+	ClientSocket* acceptSocket(SOCKET* sock);
 	//해당 클라이언트로부터 데이터 수신
-	bool receiveData(FClientSocket* cs, FCommunicationData* cd);
+	bool receiveData(ClientSocket* cs, CommunicationData* cd);
 	//해당 클라이언트로 데이터 전송
-	bool sendData(FClientSocket*cs, FCommunicationData* cd);
+	bool sendData(ClientSocket*cs, CommunicationData* cd);
 	//원하는 문구를 추가
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
@@ -176,7 +196,7 @@ private:
 	std::vector<SOCKET>ServerSockets;
 
 	//동적으로 생성/삭제
-	vector<FClientSocket*>ClientSockets;
+	vector<ClientSocket*>ClientSockets;
 	//클라이언트 최대 수
 	const int M_Clients = 8;
 	

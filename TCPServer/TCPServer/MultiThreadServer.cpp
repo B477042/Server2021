@@ -216,7 +216,7 @@ unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 		if (!cSocket) { /*cout << "cSocket is nullptr" << endl;*/ continue; }
 
 
-		FConnectionData* Data = new FConnectionData();
+		ConnectionData* Data = new ConnectionData();
 		int idx_t=-1;
 		Data->Server = server;
 		Data->idx_Sockets = cSocket;
@@ -251,7 +251,7 @@ unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 {
 	
-	auto Data = (FConnectionData*)lpParam;
+	auto Data = (ConnectionData*)lpParam;
 
 	if (!Data)
 	{
@@ -269,7 +269,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	auto server = Data->Server;
 	auto socket = Data->idx_Sockets;
 
-	FCommunicationData* CD= new FCommunicationData();
+	CommunicationData* CD= new CommunicationData();
 	memset(CD->buf_Message,0,BUFSIZE+1);
 	memset(CD->buf_IP, 0, BUFSIZE + 1);
 	CD->Share = Share;
@@ -343,7 +343,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 bool UMultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 {
-	auto Data = (FConnectionData*)inputParam;
+	auto Data = (ConnectionData*)inputParam;
 
 
 	if (!Data)
@@ -391,7 +391,7 @@ bool UMultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
 
 
 //
-FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
+ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 {
 	//예외처리 - 수용인원보다 더 많은 클라이언트가 접속 시도시
 	//		   - power가 꺼졌을 때
@@ -437,7 +437,7 @@ FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 	
-	FClientSocket* clientSocket = new FClientSocket();
+	ClientSocket* clientSocket = new ClientSocket();
 	clientSocket->sock = client_sock;
 	clientSocket->addr = clientaddr;
 
@@ -449,7 +449,7 @@ FClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	return clientSocket;
 }
 
-bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
+bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 {
 
 	
@@ -463,18 +463,50 @@ bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
 		return false;
 
 	EnterCriticalSection(&hcs_ReceiveData);
+
+	if (Share < cd->Share)
+		Share = cd->Share;
+	SyncShareValue();
+
 	// 받은 메시지 데이터 출력
 	cd->buf_Message[strlen(cd->buf_Message)] = '\0';
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cd->buf_Message);
 
 	printf("[TCP/%s:%d] 클라이언트 IP : %s\tShare = %d\n", inet_ntoa(cs->addr.sin_addr),
-		ntohs(cs->addr.sin_port), cd->buf_IP,cd->Share);
+		ntohs(cs->addr.sin_port), cd->buf_IP,Share);
 
-	if(Share< cd->Share)
-		Share = cd->Share;
-	SyncShareValue();
+	////======================과제 데이터 전송 실습==================
+	////데이터 전송 실습
+	//HeaderUserInfo headerUser;
+	//UserInfoData user;
+	////user.message = nullptr;
 
+	//cs->retval = recv(cs->sock, (char*)&headerUser, sizeof(HeaderUserInfo), 0);
+	//if (cs->retval == SOCKET_ERROR) {
+	//	err_display("recv()");
+	//	return false;
+	//}
+	//else if (cs->retval == 0)
+	//	return false;
+	//printf("선행 구조체 전달 : %d byte\n", headerUser.dataSize);
+	////user.message = new char[headerUser.messageLen];
+	////memset(user.message, 0, headerUser.messageLen);
+	//memset(user.message, 0, BUFSIZE);
+
+	//cs->retval = recv(cs->sock, (char*)&user, headerUser.dataSize, 0);
+	//if (cs->retval == SOCKET_ERROR) {
+	//	err_display("recv()");
+	//	return false;
+	//}
+	//else if (cs->retval == 0)
+	//	return false;
+
+	//printf("데이터 : x=%d, y=%d,z=%d, id=%d\n", user.x, user.y, user.z, user.id);
+	//printf("Message : %s\n", user.message);
+
+
+	//delete[]user.message;
 	//memset(cd->buf_Message, 0, BUFSIZE + 1);
 	//memset(cd->buf_IP, 0, BUFSIZE + 1);
 
@@ -487,7 +519,7 @@ bool UMultiThreadServer::receiveData(FClientSocket* cs,FCommunicationData* cd)
 	return true;
 }
 
-bool UMultiThreadServer::sendData(FClientSocket * cs, FCommunicationData* cd)
+bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 {
 	//EnterCriticalSection(&hCriticalSection);
 
@@ -499,7 +531,7 @@ bool UMultiThreadServer::sendData(FClientSocket * cs, FCommunicationData* cd)
 	cd->Share = Share;
 	
 	// 데이터 보내기
-	cs->retval = send(cs->sock, (char*)cd, sizeof(FCommunicationData), 0);
+	cs->retval = send(cs->sock, (char*)cd, sizeof(CommunicationData), 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("send()");
 		//LeaveCriticalSection(&hCriticalSection);
@@ -538,7 +570,10 @@ void UMultiThreadServer::SyncShareValue()
 	{
 		send(it->sock, buf, strlen(buf),0);
 	}
-
+	/*for (auto it : ClientSockets)
+	{
+		send(it->sock,(char*) Share, sizeof(int), 0);
+	}*/
 	
 }
 //

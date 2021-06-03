@@ -34,7 +34,7 @@ static void err_display(const char* msg);
 
 
 //전역변수/함수 호출을 줄이기 위해서 만든 구조체
-typedef struct FConnectionData
+typedef struct ConnectionData
 {
 public:
 	UTCPClient* Client;
@@ -47,16 +47,32 @@ public:
 
 //송수신 과정에서 사용되는 구조체
 //송수신 하고 싶은 데이터들을 담습니다
-typedef struct FCommunicationData
+typedef struct CommunicationData
 {
 public:
 
 	char buf_Message[BUFSIZE + 1] = "";
 	char buf_IP[BUFSIZE + 1] = "";
 	int Share;
+
 }CommunicationData;
 
+typedef struct HeaderUserInfo
+{
+public:
+	int messageLen;
+	int dataSize;
 
+}HeaderUserInfo;
+
+typedef struct UserInfoData
+{
+	int id;
+	int x;
+	int y;
+	int z;
+	char* message;
+}UserInfoData;
 
 
 class UTCPClient
@@ -105,7 +121,7 @@ private:
 	//Share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
 	bool bIsNewMessage;
 
-	FCommunicationData* communicationData;
+	CommunicationData* communicationData;
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 

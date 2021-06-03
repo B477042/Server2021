@@ -72,7 +72,7 @@ int UTCPClient::RunClient()
 	CD->Sock = sock;
 	
 
-	communicationData = new FCommunicationData();
+	communicationData = new CommunicationData();
 	
 	communicationData->Share = 0;
 	clearBuffer(communicationData->buf_Message);
@@ -183,7 +183,7 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 
 
 		//데이터 보내기
-		retval = send(CD->Sock, (char*)(CD->Client->communicationData), sizeof(FCommunicationData), 0);
+		retval = send(CD->Sock, (char*)(CD->Client->communicationData), sizeof(CommunicationData), 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
 			return false;
@@ -192,8 +192,40 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 		EnterCriticalSection(&CD->Client->hCritical);
 		printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
 		LeaveCriticalSection(&CD->Client->hCritical);
-		//Receieve 함수 출력을 위해 잠시 쉬어줍니다.
-		Sleep(66);
+
+		////======================과제 데이터 전송 실습==================
+		////데이터 전송 실습
+		//HeaderUserInfo headerUser;
+		//UserInfoData user;
+
+		//headerUser.messageLen = strlen(CD->Client->communicationData ->buf_Message)+1;
+
+		//user.message = nullptr;
+		//user.message = new char[headerUser.messageLen];
+
+		//strcpy_s(user.message, headerUser.messageLen,CD->Client->communicationData->buf_Message);
+		//user.id = rand() % 100;
+		//user.x= rand() % 100;
+		//user.y = rand() % 100;
+		//user.z = rand() % 100;
+
+		//headerUser.dataSize = sizeof(user)+headerUser.messageLen;
+
+		//retval = send(CD->Sock, (char*)(&headerUser), sizeof(headerUser), 0);
+		//if (retval == SOCKET_ERROR) {
+		//	err_display("send()");
+		//	return false;
+		//}
+		//retval = send(CD->Sock, (char*)(&user), headerUser.dataSize, 0);
+		//if (retval == SOCKET_ERROR) {
+		//	err_display("send()");
+		//	return false;
+		//}
+
+		//delete[]user.message;
+
+		////Receieve 함수 출력을 위해 잠시 쉬어줍니다.
+		//Sleep(66);
 	}
 
 	return 0;
@@ -230,6 +262,7 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 		//Share 값 동기화
 		if (retval < BUFSIZE)
 		{
+			//printf("sync test\n");
 			CD->Client->communicationData->Share = atoi(CD->Client->communicationData->buf_Message);
 		}
 
