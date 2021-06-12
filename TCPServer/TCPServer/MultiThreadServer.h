@@ -150,8 +150,8 @@ public:
 private:
 	//서버 소켓 생성
 	void createServerSocket();
-
-	//===============쓰레드 관련 함수=============
+	//========================================================
+	//				쓰레드 관련 함수 
 	
 
 	//대기 쓰레드 함수
@@ -165,7 +165,7 @@ private:
 
 
 	
-
+	//========================================================
 	//============ 쓰레드내부 통신 함수 ============
 	//클라이언트 accept
 	ClientSocket* acceptSocket(SOCKET* sock);
@@ -176,19 +176,18 @@ private:
 	//원하는 문구를 추가
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
+	//========================================================
 	//==============Share Value 관련 함수===========
 	//어떤 쓰레드에서든지 Share값이 변하면 호출된다. 변한 쉐어값을 모든 연결 클라이언트에게 보낸다.
 	void SyncShareValue();
 
 
-
+	//========================================================
 	//================ 기타 함수 ==================
 	//클라이언트와 연결 돼서 클라이언트와 관련된 정보를 업데이트 해줍니다.
 	int addClient();
 	//클라이언트와 연결 해제.
 	int removeClient(int num);
-
-
 	//============== 현재 시간 확인 =============
 	void printCurrentTime();
 private:
@@ -222,8 +221,8 @@ private:
 
 	//공유 데이터 Share, 0으로 초기화
 	static int Share;
-
-
+	const char* FileAddrress = "test.txt";
+	//========================================================
 	CRITICAL_SECTION	hCS_ProcAccept;
 	CRITICAL_SECTION	hCS_AcceptSocket;
 	CRITICAL_SECTION	hcs_ReceiveData;
