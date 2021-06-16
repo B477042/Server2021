@@ -57,22 +57,7 @@ public:
 
 }CommunicationData;
 
-typedef struct HeaderUserInfo
-{
-public:
-	int messageLen;
-	int dataSize;
 
-}HeaderUserInfo;
-
-typedef struct UserInfoData
-{
-	int id;
-	int x;
-	int y;
-	int z;
-	char* message;
-}UserInfoData;
 
 
 class UTCPClient

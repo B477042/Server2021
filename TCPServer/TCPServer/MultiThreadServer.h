@@ -112,24 +112,6 @@ typedef struct CommunicationData
 }CommunicationData;
 
 
-typedef struct HeaderUserInfo
-{
-public:
-	int messageLen;
-	int dataSize;
-
-}HeaderUserInfo;
-
-typedef struct UserInfoData
-{
-	int id;
-	int x;
-	int y;
-	int z;
-	//char* message;
-	char message[BUFSIZE];
-}UserInfoData;
-
 
 
 class UMultiThreadServer
@@ -193,8 +175,10 @@ private:
 
 	//========================================================
 	//			File 처리 관련
-	//	기록을 남길 파일을 불러옵니다. 파일 이름은 FileAddress에 
+	//	기록을 남길 파일을 불러옵니다. 파일 이름은 FileAddress에 적고
+	//	
 	void initFileStreamer();
+	
 	//	불러들인 파일을 닫습니다
 	void closeFileStreamer();
 

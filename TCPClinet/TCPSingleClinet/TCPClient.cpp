@@ -193,39 +193,7 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 		printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
 		LeaveCriticalSection(&CD->Client->hCritical);
 
-		////======================과제 데이터 전송 실습==================
-		////데이터 전송 실습
-		//HeaderUserInfo headerUser;
-		//UserInfoData user;
-
-		//headerUser.messageLen = strlen(CD->Client->communicationData ->buf_Message)+1;
-
-		//user.message = nullptr;
-		//user.message = new char[headerUser.messageLen];
-
-		//strcpy_s(user.message, headerUser.messageLen,CD->Client->communicationData->buf_Message);
-		//user.id = rand() % 100;
-		//user.x= rand() % 100;
-		//user.y = rand() % 100;
-		//user.z = rand() % 100;
-
-		//headerUser.dataSize = sizeof(user)+headerUser.messageLen;
-
-		//retval = send(CD->Sock, (char*)(&headerUser), sizeof(headerUser), 0);
-		//if (retval == SOCKET_ERROR) {
-		//	err_display("send()");
-		//	return false;
-		//}
-		//retval = send(CD->Sock, (char*)(&user), headerUser.dataSize, 0);
-		//if (retval == SOCKET_ERROR) {
-		//	err_display("send()");
-		//	return false;
-		//}
-
-		//delete[]user.message;
-
-		////Receieve 함수 출력을 위해 잠시 쉬어줍니다.
-		//Sleep(66);
+		 
 	}
 
 	return 0;
@@ -287,46 +255,6 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 	return true;
 }
 
-//
-//bool UTCPClient::sendData(int&retval, SOCKET & CD, char * buf, int length, int flags)
-//{
-//	// 데이터 보내기
-//	retval = send(CD, buf, strlen(buf), 0);
-//	if (retval == SOCKET_ERROR) {
-//		err_display("send()");
-//		return false;
-//	}
-//	printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
-//	return true;
-//}
-//
-//bool UTCPClient::receiveData(int&retval, SOCKET & CD, char * buf, int length, int flags)
-//{
-//	// 데이터 받기. 
-//	/*retval = recvn(CD, buf, BUFSIZE, 0);
-//	if (retval == SOCKET_ERROR) {
-//		err_display("recv()");
-//		return false;
-//	}
-//	else if (retval == 0)
-//		return false;*/
-//
-//	retval = recv(CD, buf, BUFSIZE, 0);
-//	if (retval == SOCKET_ERROR) {
-//		err_display("recv()");
-//		return false;
-//	}
-//	else if (retval == 0)
-//		return false;
-//
-//
-//	// 받은 데이터 출력
-//	//buf[retval] = '\0';
-//	printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
-//	printf("[받은 데이터] %s\t\n", buf);
-//	return true;
-//}
-//
 
 // 사용자 정의 데이터 수신 함수. 
 int UTCPClient::recvn(SOCKET s, char* buf, int len, int flags)

@@ -435,10 +435,15 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 		return nullptr;
 	}
 
+	//콘솔창 출력 작업 및 log 파일에 기록 작업
+	char logString[BUFSIZE] = "0,";
 	// 접속한 클라이언트 정보 출력
-	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
+	sprintf(logString,"\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-	
+	writeLog(logString);
+	printf("%s", logString);
+
+
 	ClientSocket* clientSocket = new ClientSocket();
 	clientSocket->sock = client_sock;
 	clientSocket->addr = clientaddr;
@@ -464,6 +469,7 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	else if (cs->retval == 0)
 		return false;
 
+	//Critical Section 진입 :출력 로그를 순서대로 출력시키기 위해서
 	EnterCriticalSection(&hcs_ReceiveData);
 
 	if (Share < cd->Share)
@@ -478,39 +484,7 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	printf("[TCP/%s:%d] 클라이언트 IP : %s\tShare = %d\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cd->buf_IP,Share);
 
-	////======================과제 데이터 전송 실습==================
-	////데이터 전송 실습
-	//HeaderUserInfo headerUser;
-	//UserInfoData user;
-	////user.message = nullptr;
-
-	//cs->retval = recv(cs->sock, (char*)&headerUser, sizeof(HeaderUserInfo), 0);
-	//if (cs->retval == SOCKET_ERROR) {
-	//	err_display("recv()");
-	//	return false;
-	//}
-	//else if (cs->retval == 0)
-	//	return false;
-	//printf("선행 구조체 전달 : %d byte\n", headerUser.dataSize);
-	////user.message = new char[headerUser.messageLen];
-	////memset(user.message, 0, headerUser.messageLen);
-	//memset(user.message, 0, BUFSIZE);
-
-	//cs->retval = recv(cs->sock, (char*)&user, headerUser.dataSize, 0);
-	//if (cs->retval == SOCKET_ERROR) {
-	//	err_display("recv()");
-	//	return false;
-	//}
-	//else if (cs->retval == 0)
-	//	return false;
-
-	//printf("데이터 : x=%d, y=%d,z=%d, id=%d\n", user.x, user.y, user.z, user.id);
-	//printf("Message : %s\n", user.message);
-
-
-	//delete[]user.message;
-	//memset(cd->buf_Message, 0, BUFSIZE + 1);
-	//memset(cd->buf_IP, 0, BUFSIZE + 1);
+	
 
 
 	LeaveCriticalSection(&hcs_ReceiveData);
@@ -540,11 +514,7 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 	
 		return false;
 	}
-//	printf("\ncd->share :%d \t share : %d\n", cd->Share, Share);
-	
 
-
-	//LeaveCriticalSection(&hCriticalSection);
 	
 	return true;
 }
@@ -572,10 +542,7 @@ void UMultiThreadServer::syncShareValue()
 	{
 		send(it->sock, buf, strlen(buf),0);
 	}
-	/*for (auto it : ClientSockets)
-	{
-		send(it->sock,(char*) Share, sizeof(int), 0);
-	}*/
+	 
 	
 }
 
