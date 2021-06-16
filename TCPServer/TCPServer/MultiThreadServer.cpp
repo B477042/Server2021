@@ -437,13 +437,14 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 
 	//콘솔창 출력 작업 및 log 파일에 기록 작업
 	char logString[BUFSIZE] = "0,";
-	// 접속한 클라이언트 정보 출력
+	//logString에 문자열 저장
 	sprintf(logString,"\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 	writeLog(logString);
 	printf("%s", logString);
 
 
+	//클라이언트 소켓 정보 저장
 	ClientSocket* clientSocket = new ClientSocket();
 	clientSocket->sock = client_sock;
 	clientSocket->addr = clientaddr;
@@ -472,17 +473,15 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	//Critical Section 진입 :출력 로그를 순서대로 출력시키기 위해서
 	EnterCriticalSection(&hcs_ReceiveData);
 
-	if (Share < cd->Share)
-		Share = cd->Share;
-	syncShareValue();
+	
 
 	// 받은 메시지 데이터 출력
 	cd->buf_Message[strlen(cd->buf_Message)] = '\0';
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cd->buf_Message);
 
-	printf("[TCP/%s:%d] 클라이언트 IP : %s\tShare = %d\n", inet_ntoa(cs->addr.sin_addr),
-		ntohs(cs->addr.sin_port), cd->buf_IP,Share);
+	printf("[TCP/%s:%d] 클라이언트 IP : %s\n", inet_ntoa(cs->addr.sin_addr),
+		ntohs(cs->addr.sin_port));
 
 	
 
