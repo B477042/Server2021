@@ -13,6 +13,7 @@
 #include <Windows.h>
 #include <process.h>
 #include <tchar.h>
+#include "MyPacket.h"
 using namespace std;
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
@@ -59,7 +60,6 @@ public:
 
 
 
-
 class UTCPClient
 {
 public:
@@ -82,7 +82,7 @@ private:
 //	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
 
 
-	int recvn(SOCKET s, char* buf, int len, int flags);
+	//int recvn(SOCKET s, char* buf, int len, int flags);
 	void addAditionalText(char* inputBuf,const char* text);
 	void printCurrentTime();
 
@@ -105,8 +105,11 @@ private:
 
 	//Share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
 	bool bIsNewMessage;
-
+	
 	CommunicationData* communicationData;
+
+	
+	MyPacket* Packet;
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 
