@@ -2,17 +2,20 @@
 
 
 
-MyPacket::MyPacket()
+FMyPacket::FMyPacket()
+{
+	Data = "";
+	Length = 0;
+	Header = EPacketHeader::Null;
+}
+
+
+FMyPacket::~FMyPacket()
 {
 }
 
 
-MyPacket::~MyPacket()
-{
-}
-
-
-unsigned int MyPacket::CalcLength()
+unsigned int FMyPacket::CalcLength()
 {
 	unsigned int str_len=0;
 		

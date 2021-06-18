@@ -461,7 +461,7 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	
 	return clientSocket;
 }
-
+//구버전
 bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 {
 
@@ -499,12 +499,8 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	return true;
 }
 
-bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
-{
-	
-	return false;
-}
 
+//구버전
 bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 {
 	//EnterCriticalSection(&hCriticalSection);
@@ -533,7 +529,7 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
 {
 
 	// 데이터 받기
-	cs->retval = recv(cs->sock, (char*)packet, BUFSIZE, 0);
+	cs->retval = recv(cs->sock, (char*)packet, BUFSIZ, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("recv()");
 		return false;
@@ -572,7 +568,7 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
 bool UMultiThreadServer::sendData(ClientSocket * cs, MyPacket * packet)
 {
 
-	return false;
+	return true;
 }
 
 void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, int & retval)

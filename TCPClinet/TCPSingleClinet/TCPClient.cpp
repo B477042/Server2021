@@ -206,7 +206,7 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 		cout << "[확인 메시지] Packet->Data = " << packet->Data << endl;
 		packet->Header = EPacketHeader::send_msg_CtoS;
 		
-		retval = send(sock,&packet->Data[0],BUFSIZE,0);
+		retval = send(sock,&packet->Data[0],BUFSIZ,0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
 			return false;
