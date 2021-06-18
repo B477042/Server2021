@@ -2,7 +2,7 @@
 
 
 
-FMyPacket::FMyPacket()
+MyPacket::MyPacket()
 {
 	Data = "";
 	Length = 0;
@@ -10,12 +10,12 @@ FMyPacket::FMyPacket()
 }
 
 
-FMyPacket::~FMyPacket()
+MyPacket::~MyPacket()
 {
 }
 
 
-unsigned int FMyPacket::CalcLength()
+unsigned int MyPacket::CalcLength()
 {
 	unsigned int str_len = 0;
 
