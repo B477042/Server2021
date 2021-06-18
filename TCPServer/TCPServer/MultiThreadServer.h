@@ -156,8 +156,10 @@ private: // Private Functions
 	//============ 쓰레드내부 통신 함수 ============
 	//클라이언트 accept
 	ClientSocket* acceptSocket(SOCKET* sock);
-	//해당 클라이언트로부터 데이터 수신
+	//해당 클라이언트로부터 데이터 수신. 구버전
 	bool receiveData(ClientSocket* cs, CommunicationData* cd);
+	//해당 클라이언트로부터 데이터 수신
+	bool receiveData(ClientSocket* cs, MyPacket* packet);
 	//해당 클라이언트로 데이터 전송
 	bool sendData(ClientSocket*cs, CommunicationData* cd);
 

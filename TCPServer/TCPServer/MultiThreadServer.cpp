@@ -499,6 +499,12 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	return true;
 }
 
+bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
+{
+	
+	return false;
+}
+
 bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 {
 	//EnterCriticalSection(&hCriticalSection);
