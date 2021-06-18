@@ -1,8 +1,7 @@
-#ifndef MY_PACKET_H_
-#define MY_PACKET_H_
+#pragma once
 
 
-
+#include <string>
 
 /*
 *	클라이언트와 서버가 공용으로 사용할 패킷입니다.
@@ -38,8 +37,7 @@ enum EPacketHeader
 
 };
 
-# pragma pack (1)
-template <typename TData>
+
 class MyPacket
 {
 
@@ -49,13 +47,13 @@ public:
 	unsigned int CalcLength();
 
 public:
-	unsigned int Length;
-	EPacketHeader Header;
-	TData Data;
+
+	std::string Data;
+	unsigned int Length=0;
+	EPacketHeader Header=EPacketHeader::Null;
 	const unsigned char EndChar = 0xff;
+
 };
 
-#pragma pack(pop)
 
-#endif // MY_PACKET_H_
 

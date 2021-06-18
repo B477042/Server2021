@@ -1,17 +1,18 @@
 #include "MyPacket.h"
 
-template<typename TData>
-MyPacket<TData>::MyPacket()
+
+
+MyPacket::MyPacket()
 {
 }
 
-template<typename TData>
-inline MyPacket<TData>::~MyPacket()
+
+MyPacket::~MyPacket()
 {
 }
 
-template<typename TData>
-unsigned int MyPacket<TData>::CalcLength()
+
+unsigned int MyPacket::CalcLength()
 {
 	unsigned int str_len = 0;
 

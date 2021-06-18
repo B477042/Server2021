@@ -18,10 +18,10 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-
+#include "MyPacket.h"
 using namespace std;
 
-//노트북 cpu가 8쓰레드라 8로 제한했습니다
+ 
 #define NUM_OF_THREAD 8
 
 //0번 쓰레드에 wait 할당
@@ -132,7 +132,9 @@ public:
 
 	//idx번째 통신 쓰레드를 만들어준다. 실패시 return false
 	bool CreateCommunicationRoom(void* inputParam, int idx_t);
-private:
+
+
+private: // Private Functions
 	//서버 소켓 생성
 	void createServerSocket();
 	//========================================================
@@ -158,6 +160,10 @@ private:
 	bool receiveData(ClientSocket* cs, CommunicationData* cd);
 	//해당 클라이언트로 데이터 전송
 	bool sendData(ClientSocket*cs, CommunicationData* cd);
+
+	//Packet 버전
+	bool receiveData(ClientSocket* cs, MyPacket* packet);
+	bool sendData(ClientSocket* cs, MyPacket* packet);
 	//원하는 문구를 추가
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
@@ -197,7 +203,7 @@ private:
 	string getCurrentTime_ToString();
 
 
-private:	//Variable
+private:	// Private Variables
 
 	//나중에 늘어나는 경우가 있을까봐 vector로 했습니다
 	vector<SOCKET>ServerSockets;
@@ -226,15 +232,15 @@ private:	//Variable
 	HANDLE hThread[NUM_OF_THREAD];
 
 	//=======================================================
-	//	파일 입출력 변수들
+	//	통신 관련 데이터 변수들
 	// static으로 처리 안 한 이유. Thread 내부에서 Server 객체를 포인터로 가리킬 수 있어서 
 	ifstream ReadFile;
 	ofstream WriteFile;
 	//	불러들일 파일 주소. 이 뒤에 실행 시간을 더 붙인 string을 만들어 이용합니다
 	const  char* FileAddress = "test.txt";
 
-	//공유 데이터 Share, 0으로 초기화
-	static int Share;
+	////공유 데이터 Share, 0으로 초기화
+	//static int Share;
 	
 	//========================================================
 

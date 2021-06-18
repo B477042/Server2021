@@ -1,7 +1,7 @@
 #include "MultiThreadServer.h"
 
 
- int  UMultiThreadServer::Share = 0;
+ //int  UMultiThreadServer::Share = 0;
 
 UMultiThreadServer::UMultiThreadServer()
 {
@@ -271,10 +271,14 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	auto server = Data->Server;
 	auto socket = Data->idx_Sockets;
 
-	CommunicationData* CD= new CommunicationData();
-	memset(CD->buf_Message,0,BUFSIZE+1);
-	memset(CD->buf_IP, 0, BUFSIZE + 1);
-	CD->Share = Share;
+	
+	//CommunicationData* CD= new CommunicationData();
+	//memset(CD->buf_Message,0,BUFSIZE+1);
+	//memset(CD->buf_IP, 0, BUFSIZE + 1);
+	//CD->Share = Share;
+	//통신용 패킷 초기화
+	MyPacket* packet = new MyPacket();
+	
 
 	//데이터 송수신 상태
 	while (1)
@@ -284,7 +288,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//수신
 		
-		if (server->receiveData(socket,CD) == false)
+		if (server->receiveData(socket,packet) == false)
 		{
 				bResult = false;
 				
@@ -294,11 +298,12 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//송신
 		
-		if (server->sendData(socket,CD) == false)
+		if (server->sendData(socket,packet) == false)
 		{
 			bResult = false;
 			
 		}
+
 
 		//server->sendShare(socket);
 
@@ -333,8 +338,8 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		LeaveCriticalSection(&server->hCS_DeleteCS);
 		delete Data;
-		delete CD;
-
+		//delete CD;
+		delete packet;
 	
 	
 	return 0;
@@ -480,8 +485,8 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cd->buf_Message);
 
-	printf("[TCP/%s:%d] 클라이언트 IP : %s\n", inet_ntoa(cs->addr.sin_addr),
-		ntohs(cs->addr.sin_port));
+	//printf("[TCP/%s:%d] 클라이언트 IP : %s\n", inet_ntoa(cs->addr.sin_addr),
+	//	ntohs(cs->addr.sin_port));
 
 	
 
@@ -502,8 +507,8 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 	//문구 추가
 	addAditionalText(cd->buf_Message, " from Server", cs->retval);
 	//printf("\ncd->share :%d \t share : %d\n", cd->Share, Share);
-	//Share값 추가
-	cd->Share = Share;
+	////Share값 추가
+	//cd->Share = Share;
 	
 	// 데이터 보내기
 	cs->retval = send(cs->sock, (char*)cd, sizeof(CommunicationData), 0);
@@ -516,6 +521,52 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 
 	
 	return true;
+}
+
+bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
+{
+
+	// 데이터 받기
+	cs->retval = recv(cs->sock, (char*)packet, BUFSIZE, 0);
+	if (cs->retval == SOCKET_ERROR) {
+		err_display("recv()");
+		return false;
+	}
+	else if (cs->retval == 0)
+		return false;
+
+	//Critical Section 진입 :출력 로그를 순서대로 출력시키기 위해서
+	EnterCriticalSection(&hcs_ReceiveData);
+	switch (packet->Header)
+	{
+	case EPacketHeader::Null:
+		cout << "Header is null" << endl;
+		cout << "Data is " << packet->Data << endl;
+		break;
+	case EPacketHeader::req_read_log_CtoS:
+		cout << "Header is req_read_log_CtoS" << endl;
+		break;
+	case EPacketHeader::req_read_log_StoC:
+		cout << "Header is req_read_log_StoC" << endl;
+		break;
+	case EPacketHeader::send_msg_CtoS:
+		cout << "Header is send_msg_CtoS" << endl;
+		break;
+	case EPacketHeader::send_msg_StoC:
+		cout << "Header is send_msg_StoC" << endl;
+		break;
+
+ 
+	}
+	LeaveCriticalSection(&hcs_ReceiveData);
+
+	return true;
+}
+
+bool UMultiThreadServer::sendData(ClientSocket * cs, MyPacket * packet)
+{
+
+	return false;
 }
 
 void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, int & retval)
@@ -533,14 +584,14 @@ void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, in
 }
 void UMultiThreadServer::syncShareValue()
 {
-	char buf[255];
-	memset(buf, 0, 255);
-	_itoa_s(Share, buf,10);
-	//printf("in sync :%s", buf);
-	for (auto it : ClientSockets)
-	{
-		send(it->sock, buf, strlen(buf),0);
-	}
+	//char buf[255];
+	//memset(buf, 0, 255);
+	//_itoa_s(Share, buf,10);
+	////printf("in sync :%s", buf);
+	//for (auto it : ClientSockets)
+	//{
+	//	send(it->sock, buf, strlen(buf),0);
+	//}
 	 
 	
 }

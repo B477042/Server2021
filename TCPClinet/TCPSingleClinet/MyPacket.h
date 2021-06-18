@@ -49,8 +49,8 @@ public:
 public:
 
 	std::string Data;
-	unsigned int Length;
-	EPacketHeader Header;
+	unsigned int Length = 0;
+	EPacketHeader Header = EPacketHeader::Null;
 	const unsigned char EndChar = 0xff;
 
 };

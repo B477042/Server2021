@@ -273,6 +273,14 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 		//LeaveCriticalSection(&CD->Client->hCritical);
 		
 		retval = recv( sock,&packet->Data[0],BUFSIZE,false );
+		if (retval == SOCKET_ERROR) 
+		{
+				err_display("recv()");
+				return false;
+		}
+			else if (retval == 0)
+				return false;
+		
 		EnterCriticalSection(&hCritical);
 		cout << "==============================================\n";
 		cout << "retval = " << retval << endl;
