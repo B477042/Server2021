@@ -75,11 +75,11 @@ int UTCPClient::RunClient()
 	sPacket = new FStaticPacket();
 	dPacket = new FDynamicPacket();
 
-	//IPTest
-	auto ip = getIPAdrress();
-	cout << "IP : " << ip << endl;
-	cout << "sizeof ip : " << sizeof(ip) << endl;
-	cout << "strlen : " << strlen(ip) << endl;
+	////IPTest
+	//auto ip = getIPAdrress();
+	//cout << "IP : " << ip << endl;
+	//cout << "sizeof ip : " << sizeof(ip) << endl;
+	//cout << "strlen : " << strlen(ip) << endl;
 
 
 	//송신 스레드 생성
@@ -87,7 +87,7 @@ int UTCPClient::RunClient()
 		_beginthreadex(
 			NULL,
 			0,
-			UTCPClient::procSend,
+			UTCPClient::procInteraction,
 			(LPVOID)(CD),
 			CREATE_SUSPENDED,
 			(unsigned *)&dwThreadId[Idx_Send]
@@ -119,8 +119,8 @@ int UTCPClient::RunClient()
 	ResumeThread(hThread[Idx_Send]);
 	ResumeThread(hThread[Idx_Receive]);
 	
-	WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
-
+	//WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+	WaitForSingleObject(hThread[Idx_Send], INFINITE);
 
 
 
@@ -144,25 +144,57 @@ int UTCPClient::RunClient()
 /*
 *	Server로 데이터를 보냅니다
 */
-unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
+unsigned int __stdcall UTCPClient::procInteraction(LPVOID IpParam)
 {
 	//ConectionData
 	auto CD = (ConnectionData*)IpParam;
 	if (!CD)return false;
 
 
-
+	
 	//수신용 지역변수들
 	int retval = 0;
 	int len = 0;
 	auto client = CD->Client;
 	
 	auto sock = CD->Sock;
-	string inputStr;
+
+	char actionKey;
+	
 	// 서버와 데이터 통신
 	while (1) {
-	
-		
+		cout << endl;
+		cout << "===========================" << endl;
+		cout << "|     키를 입력하세요     |" << endl;
+		cout << "|     1. 메시지 전송      |" << endl;
+		cout << "|     2. 서버 내역 확인   |" << endl;
+		cout << "|     3. 종료             |" << endl;
+		cout << "===========================" << endl;
+		//action Key를 받고 입력 버퍼를 지웁니다
+		cin >> actionKey;
+		cin.ignore();
+
+		switch (actionKey)
+		{
+		case '1':
+			cout << endl;
+			cout << "[메시지 전송]" << endl;
+			client->writeMessage(sock, client, retval);
+			break;
+		case '2':
+
+			cout << endl;
+			cout << "[서버 내역 확인]" << endl;
+			client->requestReadMessage(sock, client, retval);
+			break;
+		case '3':
+			cout << "종료합니다" << endl;
+			return 0;
+			break;
+		default:
+			cout << "[Notify] 잘못된 입력입니다" << endl;
+			break;
+		}
 
 		//===============================
 		//	구 버전
@@ -190,41 +222,7 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 		//printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
 		//LeaveCriticalSection(&CD->Client->hCritical);
 
-		cout << "[보낼 데이터] ";
 		
-		getline(cin, inputStr);
-		
-
-		//보낼 데이터 준비 작업
-		int strLen = inputStr.length()+1;
-		auto sPacket = client->sPacket;
-		auto dPacket = client->dPacket;
-		//Static packet 값 조정
-		sPacket->Length = strLen;
-		sPacket->Header = EPacketHeader::send_msg_CtoS;
-		//Dynamic packet 값 조정
-		
-		strncpy_s(dPacket->CString,strLen, inputStr.c_str(),inputStr.length());
-		
-
-		EnterCriticalSection(&CD->Client->hCritical);
-		
-		//packet->Header = EPacketHeader::send_msg_CtoS;
-		//Static Packet 보내기
-		retval = send(sock,(char*)sPacket,sizeof(FStaticPacket),0);
-		if (retval == SOCKET_ERROR) {
-			err_display("send()");
-			return false;
-		}
-		cout << "[Notify] Static Packet " << retval << " 바이트를 보냈습니다" << endl;
-		retval = send(sock, (char*)dPacket, sPacket->Length, 0);
-		if (retval == SOCKET_ERROR) {
-			err_display("send()");
-			return false;
-		}
-		cout << "[Notify] Dynamic Packet " << retval << " 바이트를 보냈습니다" << endl;
-		cout << "[보낸 메시지] " << dPacket->CString << endl;
-		LeaveCriticalSection(&CD->Client->hCritical);
 
 		 
 	}
@@ -300,17 +298,25 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 		case EPacketHeader::Null:
 			cout << "Header is NULL" << endl;
 			break;
+		//클라이언트는 못 받습니다
 		case EPacketHeader::req_read_log_CtoS:
 			cout << "[오류] 클라이언틑는 req_read_log_CtoS를 받을 수 없습니다" << endl;
 
 			break;
+
+		//서버가 보낸 로그를 읽어 들입니다.
 		case EPacketHeader::req_read_log_StoC:
-			
+			retval = recv(sock, (char*)client->dPacket, client->sPacket->Length, 0);
+			if (retval == SOCKET_ERROR) {
+				err_display("recv()");
+				return false;
+			}
+			cout << "[Notify] 받아온 서버의 Log 입니다." << endl;
+			cout << client->dPacket->CString << endl;
+
 			break;
-			//Client로부터 Dynamic Packet을 받아옵니다
-			//받은 후 클라이언트에게 확인 메시지를 보내기 위해 Static Packet의 해더를
-			//send_msg_StoC로 바꿉니다
-		case EPacketHeader::send_msg_CtoS:
+		//클라이언트는 못 받습니다
+	   	 case EPacketHeader::send_msg_CtoS:
 			cout << "[오류] 클라이언틑는 send_msg_CtoS를 받을 수 없습니다" << endl;
 			
 			break;
@@ -338,6 +344,69 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 	}
 	
 	return true;
+}
+
+bool UTCPClient::writeMessage(SOCKET& sock, UTCPClient * client, int& retval)
+{
+	string inputStr;
+	
+	cout << "[보낼 데이터] ";
+
+	getline(cin, inputStr);
+
+
+	//보낼 데이터 준비 작업
+	int strLen = inputStr.length() + 1;
+	auto sPacket = client->sPacket;
+	auto dPacket = client->dPacket;
+	//Static packet 값 조정
+	sPacket->Length = strLen;
+	sPacket->Header = EPacketHeader::send_msg_CtoS;
+	//Dynamic packet 값 조정
+
+	strncpy_s(dPacket->CString, strLen, inputStr.c_str(), inputStr.length());
+
+
+	EnterCriticalSection(& client->hCritical);
+
+	//packet->Header = EPacketHeader::send_msg_CtoS;
+	//Static Packet 보내기
+	retval = send(sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("send()");
+		return false;
+	}
+	cout << "[Notify] Static Packet " << retval << " 바이트를 보냈습니다" << endl;
+	retval = send(sock, (char*)dPacket, sPacket->Length, 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("send()");
+		return false;
+	}
+	cout << "[Notify] Dynamic Packet " << retval << " 바이트를 보냈습니다" << endl;
+	cout << "[보낸 메시지] " << dPacket->CString << endl;
+	LeaveCriticalSection(&client->hCritical);
+
+	Sleep(66);
+	return true;
+}
+
+bool UTCPClient::requestReadMessage(SOCKET & sock, UTCPClient * client, int & retval)
+{
+	auto sPacket = client->sPacket;
+	auto dPacket = client->dPacket;
+	
+	sPacket->Header = EPacketHeader::req_read_log_CtoS;
+	sPacket->Length = BUFSIZ;
+
+	retval = send(sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("send()");
+		return false;
+	}
+
+
+
+	return false;
 }
 
 

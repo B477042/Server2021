@@ -77,7 +77,8 @@ int UMultiThreadServer::RunMultiThreadServer()
 	ResumeThread(hThread[Idx_Accept]);
 
 	//cout << "stop!" << endl;
-	WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+	//WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+	WaitForSingleObject(hThread[Idx_Wait], INFINITE);
 
 	cout << "ByeBye" << endl;
 	//cout << "GJ" << endl;
@@ -319,8 +320,15 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	
 		// closesocket()
 		closesocket(socket->sock);
-		::printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
+		char logString[BUFSIZE] = "0,";
+		//logString에 문자열 저장
+		
+		
+
+		sprintf(logString,"[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
 			inet_ntoa(socket->addr.sin_addr), ntohs(socket->addr.sin_port));
+		server->writeLog(logString);
+
 
 		server->removeClient(Data->idx_Thread);
 		
@@ -447,6 +455,7 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	//콘솔창 출력 작업 및 log 파일에 기록 작업
 	char logString[BUFSIZE] = "0,";
 	//logString에 문자열 저장
+	WriteFile << "===================================================================================\n";
 	sprintf(logString,"\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 	writeLog(logString);
@@ -584,9 +593,11 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FDynamicPacket * packet,
 	}
 	else if (cs->retval == 0)
 		return false;
+	//클라이언트로 부터 온 데이터를 출력하고 출력 메시지와 같은 내용을 파일에 작성합니다
 	cout << "[TCP / "<< inet_ntoa(cs->addr.sin_addr)<<":"<< ntohs(cs->addr.sin_port)<<"] " << packet->CString << endl;
-	
-	
+	EnterCriticalSection(&hCS_FileAccess);
+	WriteFile<< "[TCP / " << inet_ntoa(cs->addr.sin_addr) << ":" << ntohs(cs->addr.sin_port) << "] " << packet->CString << endl;
+	LeaveCriticalSection(&hCS_FileAccess);
 	return true;
 }
 

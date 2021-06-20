@@ -74,9 +74,16 @@ public:
 private:
 
 
-	//
-	static unsigned int WINAPI procSend(LPVOID IpParam);
+	//사용자 인터페이스 스레드 함수
+	static unsigned int WINAPI procInteraction(LPVOID IpParam);
+	//수신 스레드 함수
 	static unsigned int WINAPI procRecieve(LPVOID IpParam);
+	//문자열을 서버로 보냅니다
+	bool writeMessage(SOCKET& sock, UTCPClient* client,int& retval);
+	//서버에게 로그를 보내줄 것을 요청합니다
+	bool requestReadMessage(SOCKET& sock, UTCPClient* client, int& retval);
+	
+
 
 //	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
 //	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
