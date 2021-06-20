@@ -277,8 +277,9 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	//memset(CD->buf_IP, 0, BUFSIZE + 1);
 	//CD->Share = Share;
 	//통신용 패킷 초기화
-	MyPacket* packet = new MyPacket();
-	
+	//MyPacket* packet = new MyPacket();
+	FStaticPacket* sPacket = new FStaticPacket();
+	FDynamicPacket*dPacket = new FDynamicPacket();
 
 	//데이터 송수신 상태
 	while (1)
@@ -286,9 +287,9 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 		//문제가 생기면 송수신 중단
 		if (!bResult)break;
 
-		//수신
+		//수신. static packet
 		
-		if (server->receiveData(socket,packet) == false)
+		if (server->receiveData(socket,sPacket) == false)
 		{
 				bResult = false;
 				
@@ -298,11 +299,31 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//송신
 		
-		if (server->sendData(socket,packet) == false)
+		if (server->sendData(socket,sPacket) == false)
 		{
 			bResult = false;
 			
 		}
+
+		//문제가 생기면 송수신 중단
+		if (!bResult)break;
+
+		if (server->receiveData(socket, dPacket,sPacket->Length) == false)
+		{
+			bResult = false;
+
+		}
+		//문제가 생기면 송수신 중단
+		if (!bResult)break;
+
+		//송신
+
+		if (server->sendData(socket, dPacket) == false)
+		{
+			bResult = false;
+
+		}
+
 
 
 		//server->sendShare(socket);
@@ -339,8 +360,9 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 		LeaveCriticalSection(&server->hCS_DeleteCS);
 		delete Data;
 		//delete CD;
-		delete packet;
-	
+		//delete packet;
+		delete sPacket;
+		delete dPacket;
 	
 	return 0;
 }
@@ -525,11 +547,11 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 	return true;
 }
 
-bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
+bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket * packet)
 {
 
 	// 데이터 받기
-	cs->retval = recv(cs->sock, (char*)packet, BUFSIZ, 0);
+	cs->retval = recv(cs->sock, (char*)packet, sizeof(FStaticPacket), 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("recv()");
 		return false;
@@ -543,7 +565,7 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
 	{
 	case EPacketHeader::Null:
 		cout << "Header is null" << endl;
-		cout << "Data is " << packet->Data << endl;
+		cout << "Data is " <<  endl;
 		break;
 	case EPacketHeader::req_read_log_CtoS:
 		cout << "Header is req_read_log_CtoS" << endl;
@@ -565,9 +587,32 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, MyPacket * packet)
 	return true;
 }
 
-bool UMultiThreadServer::sendData(ClientSocket * cs, MyPacket * packet)
+bool UMultiThreadServer::receiveData(ClientSocket * cs, FDynamicPacket * packet, const int Length)
+{
+	packet->InitCString(Length);
+	cs->retval = recv(cs->sock, (char*)packet, sizeof(FDynamicPacket)+Length, 0);
+	if (cs->retval == SOCKET_ERROR) {
+		err_display("recv()");
+		return false;
+	}
+	else if (cs->retval == 0)
+		return false;
+	cout << "Packet string " << packet->CString << endl;
+
+	packet->ResetCString();
+	return true;
+}
+
+
+
+bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * packet)
 {
 
+	return true;
+}
+
+bool UMultiThreadServer::sendData(ClientSocket * cs, FDynamicPacket * packet)
+{
 	return true;
 }
 

@@ -71,17 +71,10 @@ int UTCPClient::RunClient()
 	CD->Client = this;
 	CD->Sock = sock;
 	
-	//===========================================
-	//		communicationData 버전 
-	//communicationData = new CommunicationData();
-	//
-	//communicationData->Share = 0;
-	//clearBuffer(communicationData->buf_Message);
-	//clearBuffer(communicationData->buf_IP);
-	
-	//=============================================
-	//		MyPacket 버전
-	Packet = new MyPacket();
+	//Packet 초기화
+	S_Packet = new FStaticPacket();
+	D_Packet = new FDynamicPacket();
+
 
 
 	//송신 스레드 생성
@@ -132,8 +125,8 @@ int UTCPClient::RunClient()
 
 
 	delete CD;
-	//delete communicationData;
-	delete Packet;
+	delete S_Packet;
+	delete D_Packet;
 	// closesocket()
 	closesocket(sock);
 	DeleteCriticalSection(&hCritical);
@@ -158,7 +151,7 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 	int retval = 0;
 	int len = 0;
 	auto client = CD->Client;
-	auto packet = CD->Client->Packet;
+	
 	auto sock = CD->Sock;
 	string inputStr;
 	// 서버와 데이터 통신
@@ -201,17 +194,37 @@ unsigned int __stdcall UTCPClient::procSend(LPVOID IpParam)
 		cout << "[보낼 데이터] ";
 		
 		cin >> inputStr;
-		packet->Data = inputStr;
-		EnterCriticalSection(&CD->Client->hCritical);
-		cout << "[확인 메시지] Packet->Data = " << packet->Data << endl;
-		packet->Header = EPacketHeader::send_msg_CtoS;
 		
-		retval = send(sock,&packet->Data[0],BUFSIZ,0);
+
+		//보낼 데이터 준비 작업
+		int strLen = inputStr.length()+1;
+		auto sPacket = client->S_Packet;
+		auto dPacket = client->D_Packet;
+		//Static packet 값 조정
+		sPacket->Length = strLen;
+		sPacket->Header = EPacketHeader::send_msg_CtoS;
+		//Dynamic packet 값 조정
+		dPacket->InitCString(strLen);
+		strncpy_s(dPacket->CString,strLen, inputStr.c_str(),inputStr.length());
+		
+
+		EnterCriticalSection(&CD->Client->hCritical);
+		cout << "[확인 메시지] Packet->Data = "<<dPacket->CString  << endl;
+		//packet->Header = EPacketHeader::send_msg_CtoS;
+		//Static Packet 보내기
+		retval = send(sock,(char*)sPacket,sizeof(FStaticPacket),0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
 			return false;
 		}
-		cout << "[클라이언트] " << retval << " 바이트를 보냈습니다" << endl;
+		cout << "[클라이언트] Static Packet : " << retval << " 바이트를 보냈습니다" << endl;
+		retval = send(sock, (char*)dPacket, sPacket->Length, 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+			return false;
+		}
+		cout << "[클라이언트] Dynamic Packet : " << retval << " 바이트를 보냈습니다" << endl;
+		cout << "[클라이언트] Dynamic Packet :" << dPacket->CString << endl;
 		LeaveCriticalSection(&CD->Client->hCritical);
 
 		 
@@ -231,12 +244,8 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 	auto CD = (ConnectionData*)IpParam;
 	if (!CD)return false;
 
-	auto packet = CD->Client->Packet;
-	if (!packet)
-	{
-		cout << "This Packet is null" << endl;
-		return false;
-	}
+	
+	
 	auto sock = CD->Sock;
 	auto hCritical = CD->Client->hCritical;
 	int retval=0;
@@ -272,7 +281,7 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 		//}
 		//LeaveCriticalSection(&CD->Client->hCritical);
 		
-		retval = recv( sock,&packet->Data[0],BUFSIZE,false );
+		//retval = recv( sock,,BUFSIZE,false );
 		if (retval == SOCKET_ERROR) 
 		{
 				err_display("recv()");
@@ -284,8 +293,8 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 		EnterCriticalSection(&hCritical);
 		cout << "==============================================\n";
 		cout << "retval = " << retval << endl;
-		cout << "Recieve Data : " << packet->Data << endl;
-		cout << "Recieve Header : " << packet->Header << endl;
+		cout << "Recieve Data : "  << endl;
+		cout << "Recieve Header : " <<  endl;
 		LeaveCriticalSection(&hCritical);
 	}
 	

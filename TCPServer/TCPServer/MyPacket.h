@@ -50,12 +50,23 @@ public:
 struct FDynamicPacket
 {
 public:
-	FDynamicPacket(int Length = 0)
+	FDynamicPacket()
+	{
+
+	}
+	
+	//소멸할 때 자동으로 해제 해준다
+	~FDynamicPacket()
+	{
+		delete CString;
+	}
+	//CString 배열 초기화만 수동으로 해준다
+	void InitCString(int Length)
 	{
 		CString = new char[Length];
 		memset(CString, NULL, Length);
 	}
-	~FDynamicPacket()
+	void ResetCString()
 	{
 		delete CString;
 	}
@@ -63,23 +74,4 @@ public:
 	//CString
 	char* CString;
 };
-
-
-#pragma pack(push, 8)
-typedef struct FMyPacket
-{
-public:
-	int Length;
-	int Header;
-	string Data;
-	//const unsigned char EndChar = 0xff;
-public:
-	FMyPacket();
-	~FMyPacket();
-	unsigned int CalcLength();
-
-}MyPacket;
-#pragma pack(pop)
-
-
 

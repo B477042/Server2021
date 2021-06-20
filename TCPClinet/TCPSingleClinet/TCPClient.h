@@ -106,10 +106,12 @@ private:
 	//Share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
 	bool bIsNewMessage;
 	
-	CommunicationData* communicationData;
-
-	
-	MyPacket* Packet;
+	//CommunicationData* communicationData;
+	//Static value packet
+	FStaticPacket* S_Packet;
+	//Dynmaic value packet
+	FDynamicPacket* D_Packet;
+	//MyPacket* Packet;
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 

@@ -161,9 +161,11 @@ private: // Private Functions
 	//해당 클라이언트로 데이터 전송
 	bool sendData(ClientSocket*cs, CommunicationData* cd);
 
-	//Packet 버전
-	bool receiveData(ClientSocket* cs, MyPacket* packet);
-	bool sendData(ClientSocket* cs, MyPacket* packet);
+	//
+	bool receiveData(ClientSocket* cs, FStaticPacket* packet);
+	bool receiveData(ClientSocket* cs, FDynamicPacket* packet,const int Length);
+	bool sendData(ClientSocket* cs, FStaticPacket* packet);
+	bool sendData(ClientSocket* cs, FDynamicPacket* packet);
 	//원하는 문구를 추가
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 

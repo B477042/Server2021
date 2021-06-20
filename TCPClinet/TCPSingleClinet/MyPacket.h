@@ -11,7 +11,7 @@ enum EPacketHeader
 	/*
 	*	Default Value
 	*/
-	Null=0,
+	Null = 0,
 	/*
 	*	send message client to server
 		클라이언트가 작성한 메시지를 서버로 보냅니다
@@ -25,9 +25,9 @@ enum EPacketHeader
 	/*
 	*	request read log client to server
 	*	클라이언트가 서버에 있는 log를 읽기 위해 알려달라고 호출합니다.
-	*	
+	*
 	*/
-	req_read_log_CtoS, 
+	req_read_log_CtoS,
 	/*
 	*	request read log server to client
 	*	서버가 클라이언트에게 log 내역을 보내줍니다.
@@ -50,12 +50,22 @@ public:
 struct FDynamicPacket
 {
 public:
-	FDynamicPacket(int Length=0)
+	FDynamicPacket()
+	{
+
+	}
+	//소멸할 때 자동으로 해제 해준다
+	~FDynamicPacket()
+	{
+		delete CString;
+	}
+	//CString 배열 초기화만 수동으로 해준다
+	void InitCString(int Length)
 	{
 		CString = new char[Length];
 		memset(CString, NULL, Length);
 	}
-	~FDynamicPacket()
+	void ResetCString()
 	{
 		delete CString;
 	}
@@ -63,23 +73,4 @@ public:
 	//CString
 	char* CString;
 };
-
-
-#pragma pack(push, 8)
-typedef struct FMyPacket
-{
-public:
-	int Length;
-	int Header;
-	string Data;
-	//const unsigned char EndChar = 0xff;
-public:
-	FMyPacket();
-	~FMyPacket();
-	unsigned int CalcLength();
-
-}MyPacket;
-#pragma pack(pop)
-
-
 
