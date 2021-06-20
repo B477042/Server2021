@@ -162,11 +162,16 @@ private: // Private Functions
 	bool sendData(ClientSocket*cs, CommunicationData* cd);
 
 	//
-	bool receiveData(ClientSocket* cs, FStaticPacket* packet);
+	bool receiveData(ClientSocket* cs, FStaticPacket* sPacket, FDynamicPacket* dPacket);
 	bool receiveData(ClientSocket* cs, FDynamicPacket* packet,const int Length);
-	bool sendData(ClientSocket* cs, FStaticPacket* packet);
-	bool sendData(ClientSocket* cs, FDynamicPacket* packet);
-	//원하는 문구를 추가
+	bool sendData(ClientSocket* cs, FStaticPacket* sPacket, FDynamicPacket* dPacket);
+	bool sendData(ClientSocket* cs, FDynamicPacket* packet, const int Length);
+	/* 원하는 문구를 추가
+		@Param
+		*inputBuf : 텍스트를 추가하게될 버퍼
+		*text : 추가시킬 텍스트
+		*retval : 텍스트를 추가한 후 inputBuf의 길이를 반환합니다
+	*/
 	void addAditionalText(char* inputBuf, const char* text, int& retval);
 
 

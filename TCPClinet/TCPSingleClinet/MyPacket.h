@@ -52,25 +52,15 @@ struct FDynamicPacket
 public:
 	FDynamicPacket()
 	{
-
+		memset(CString, NULL, BUFSIZ);
 	}
-	//소멸할 때 자동으로 해제 해준다
-	~FDynamicPacket()
-	{
-		delete CString;
-	}
-	//CString 배열 초기화만 수동으로 해준다
-	void InitCString(int Length)
-	{
-		CString = new char[Length];
-		memset(CString, NULL, Length);
-	}
+	
 	void ResetCString()
 	{
-		delete CString;
+		memset(CString, NULL,BUFSIZ);
 	}
 
-	//CString
-	char* CString;
+	//CString, bufsiz 512
+	char CString[BUFSIZ];
 };
 

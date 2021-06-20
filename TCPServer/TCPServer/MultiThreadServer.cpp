@@ -289,7 +289,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//수신. static packet
 		
-		if (server->receiveData(socket,sPacket) == false)
+		if (server->receiveData(socket,sPacket,dPacket) == false)
 		{
 				bResult = false;
 				
@@ -299,31 +299,13 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//송신
 		
-		if (server->sendData(socket,sPacket) == false)
+		if (server->sendData(socket,sPacket, dPacket) == false)
 		{
 			bResult = false;
 			
 		}
 
-		//문제가 생기면 송수신 중단
-		if (!bResult)break;
-
-		if (server->receiveData(socket, dPacket,sPacket->Length) == false)
-		{
-			bResult = false;
-
-		}
-		//문제가 생기면 송수신 중단
-		if (!bResult)break;
-
-		//송신
-
-		if (server->sendData(socket, dPacket) == false)
-		{
-			bResult = false;
-
-		}
-
+		
 
 
 		//server->sendShare(socket);
@@ -547,11 +529,11 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 	return true;
 }
 
-bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket * packet)
+bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket* sPacket, FDynamicPacket* dPacket)
 {
 
-	// 데이터 받기
-	cs->retval = recv(cs->sock, (char*)packet, sizeof(FStaticPacket), 0);
+	// Static Packet 받기
+	cs->retval = recv(cs->sock, (char*)sPacket, sizeof(FStaticPacket), 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("recv()");
 		return false;
@@ -561,23 +543,28 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket * packet)
 
 	//Critical Section 진입 :출력 로그를 순서대로 출력시키기 위해서
 	EnterCriticalSection(&hcs_ReceiveData);
-	switch (packet->Header)
+	switch (sPacket->Header)
 	{
 	case EPacketHeader::Null:
-		cout << "Header is null" << endl;
-		cout << "Data is " <<  endl;
+		cout << "Header is NULL" << endl;
 		break;
 	case EPacketHeader::req_read_log_CtoS:
 		cout << "Header is req_read_log_CtoS" << endl;
+	
 		break;
 	case EPacketHeader::req_read_log_StoC:
-		cout << "Header is req_read_log_StoC" << endl;
+		cout << "[오류] 서버는 req_read_log_StoC를 받을 수 없습니다" << endl;
 		break;
+		//Client로부터 Dynamic Packet을 받아옵니다
+		//받은 후 클라이언트에게 확인 메시지를 보내기 위해 Static Packet의 해더를
+		//send_msg_StoC로 바꿉니다
 	case EPacketHeader::send_msg_CtoS:
-		cout << "Header is send_msg_CtoS" << endl;
+		
+		receiveData(cs, dPacket, sPacket->Length);
+		sPacket->Header = EPacketHeader::send_msg_StoC;
 		break;
 	case EPacketHeader::send_msg_StoC:
-		cout << "Header is send_msg_StoC" << endl;
+		cout << "[오류] 서버는 send_msg_StoC를 받을 수 없습니다" << endl;
 		break;
 
  
@@ -586,10 +573,10 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket * packet)
 
 	return true;
 }
-
+//
 bool UMultiThreadServer::receiveData(ClientSocket * cs, FDynamicPacket * packet, const int Length)
 {
-	packet->InitCString(Length);
+	
 	cs->retval = recv(cs->sock, (char*)packet, sizeof(FDynamicPacket)+Length, 0);
 	if (cs->retval == SOCKET_ERROR) {
 		err_display("recv()");
@@ -597,21 +584,69 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FDynamicPacket * packet,
 	}
 	else if (cs->retval == 0)
 		return false;
-	cout << "Packet string " << packet->CString << endl;
-
-	packet->ResetCString();
+	cout << "[TCP / "<< inet_ntoa(cs->addr.sin_addr)<<":"<< ntohs(cs->addr.sin_port)<<"] " << packet->CString << endl;
+	
+	
 	return true;
 }
 
 
 
-bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * packet)
+bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket* sPacket, FDynamicPacket* dPacket)
 {
 
+	switch (sPacket->Header)
+	{
+	case EPacketHeader::Null:
+		cout << "Header is NULL" << endl;
+		
+		break;
+	case EPacketHeader::req_read_log_CtoS:
+		cout << "[오류] 서버는 req_read_log_CtoS를 보낼 수 없습니다" << endl;
+
+		break;
+	case EPacketHeader::req_read_log_StoC:
+		cout << "Header is req_read_log_StoC" << endl;
+		break;
+	 
+	case EPacketHeader::send_msg_CtoS:
+		cout << "[오류] 서버는 send_msg_CtoS를 보낼 수 없습니다" << endl;
+	 
+		break;
+
+		//Client로 확인 메시지를 보냅니다
+	case EPacketHeader::send_msg_StoC:
+
+		//클라로 보낼 문구 추가
+		addAditionalText(dPacket->CString, " from Server", sPacket->Length);
+		//Static packet 전송
+		cs->retval = send(cs->sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+		if (cs->retval == SOCKET_ERROR) {
+			err_display("send()");
+			//LeaveCriticalSection(&hCriticalSection);
+
+			return false;
+		}
+		//Dynamic packet 전송
+		cs->retval = send(cs->sock, (char*)dPacket, sPacket->Length, 0);
+		if (cs->retval == SOCKET_ERROR) {
+			err_display("send()");
+			//LeaveCriticalSection(&hCriticalSection);
+
+			return false;
+		}
+		//메시지를 전송한 후 dPacket string을 초기화 시켜준다
+		dPacket->ResetCString();
+
+		break;
+	}
+
+
+
 	return true;
 }
 
-bool UMultiThreadServer::sendData(ClientSocket * cs, FDynamicPacket * packet)
+bool UMultiThreadServer::sendData(ClientSocket * cs, FDynamicPacket* packet, const int Length)
 {
 	return true;
 }

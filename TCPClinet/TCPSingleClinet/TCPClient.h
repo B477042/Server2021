@@ -74,7 +74,7 @@ public:
 private:
 
 
-	//Input으로 socket 넘겨줄 것
+	//
 	static unsigned int WINAPI procSend(LPVOID IpParam);
 	static unsigned int WINAPI procRecieve(LPVOID IpParam);
 
@@ -108,9 +108,9 @@ private:
 	
 	//CommunicationData* communicationData;
 	//Static value packet
-	FStaticPacket* S_Packet;
+	FStaticPacket* sPacket;
 	//Dynmaic value packet
-	FDynamicPacket* D_Packet;
+	FDynamicPacket* dPacket;
 	//MyPacket* Packet;
 
 	DWORD dwThreadId[NUM_OF_THREAD];
