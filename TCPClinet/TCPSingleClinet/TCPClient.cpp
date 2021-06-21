@@ -165,10 +165,10 @@ unsigned int __stdcall UTCPClient::procInteraction(LPVOID IpParam)
 	while (1) {
 		cout << endl;
 		cout << "===========================" << endl;
-		cout << "|     키를 입력하세요     |" << endl;
-		cout << "|     1. 메시지 전송      |" << endl;
-		cout << "|     2. 서버 내역 확인   |" << endl;
-		cout << "|     3. 종료             |" << endl;
+		cout << "|     Press Key           |" << endl;
+		cout << "|     1. Send Message     |" << endl;
+		cout << "|     2. Confirm Log      |" << endl;
+		cout << "|     3. Exit             |" << endl;
 		cout << "===========================" << endl;
 		//action Key를 받고 입력 버퍼를 지웁니다
 		cin >> actionKey;
@@ -178,17 +178,19 @@ unsigned int __stdcall UTCPClient::procInteraction(LPVOID IpParam)
 		{
 		case '1':
 			cout << endl;
-			cout << "[메시지 전송]" << endl;
+			
+			cout << "[Send Message]" << endl;
 			client->writeMessage(sock, client, retval);
 			break;
 		case '2':
 
 			cout << endl;
-			cout << "[서버 내역 확인]" << endl;
+			cout << "[Confirm Server Log]" << endl;
 			client->requestReadMessage(sock, client, retval);
+			Sleep(1000);
 			break;
 		case '3':
-			cout << "종료합니다" << endl;
+			cout << "[Exit]" << endl;
 			return 0;
 			break;
 		default:
@@ -311,8 +313,8 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 				err_display("recv()");
 				return false;
 			}
-			cout << "[Notify] 받아온 서버의 Log 입니다." << endl;
-			cout << client->dPacket->CString << endl;
+			//cout << "[Notify] 받아온 서버의 Log 입니다." << endl;
+			cout << client->dPacket->CString;
 
 			break;
 		//클라이언트는 못 받습니다
@@ -350,7 +352,7 @@ bool UTCPClient::writeMessage(SOCKET& sock, UTCPClient * client, int& retval)
 {
 	string inputStr;
 	
-	cout << "[보낼 데이터] ";
+	
 
 	getline(cin, inputStr);
 

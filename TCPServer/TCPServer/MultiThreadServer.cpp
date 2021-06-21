@@ -300,7 +300,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//송신
 		
-		if (server->sendData(socket,sPacket, dPacket) == false)
+		if (server->sendData(socket,sPacket, dPacket,server) == false)
 		{
 			bResult = false;
 			
@@ -325,7 +325,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 		
 		
 
-		sprintf(logString,"[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
+		sprintf(logString,"[TCP Server] Client Disconnected: IP Address=%s, Port #%d\n",
 			inet_ntoa(socket->addr.sin_addr), ntohs(socket->addr.sin_port));
 		server->writeLog(logString);
 
@@ -456,7 +456,7 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	char logString[BUFSIZE] = "0,";
 	//logString에 문자열 저장
 	WriteFile << "===================================================================================\n";
-	sprintf(logString,"\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
+	sprintf(logString,"\n[TCP Server] Client Connected : IP Address=%s, Port #%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 	writeLog(logString);
 	printf("%s", logString);
@@ -558,8 +558,8 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket* sPacket, 
 		cout << "Header is NULL" << endl;
 		break;
 	case EPacketHeader::req_read_log_CtoS:
-		cout << "Header is req_read_log_CtoS" << endl;
-	
+		
+		sPacket->Header = EPacketHeader::req_read_log_StoC;
 		break;
 	case EPacketHeader::req_read_log_StoC:
 		cout << "[오류] 서버는 req_read_log_StoC를 받을 수 없습니다" << endl;
@@ -574,6 +574,7 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket* sPacket, 
 		break;
 	case EPacketHeader::send_msg_StoC:
 		cout << "[오류] 서버는 send_msg_StoC를 받을 수 없습니다" << endl;
+		
 		break;
 
  
@@ -603,9 +604,11 @@ bool UMultiThreadServer::receiveData(ClientSocket * cs, FDynamicPacket * packet,
 
 
 
-bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket* sPacket, FDynamicPacket* dPacket)
-{
 
+
+bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * sPacket, FDynamicPacket * dPacket, UMultiThreadServer * Server)
+{
+	char totalLog[BUFSIZ] = "0,";
 	switch (sPacket->Header)
 	{
 	case EPacketHeader::Null:
@@ -617,7 +620,48 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket* sPacket, FDy
 
 		break;
 	case EPacketHeader::req_read_log_StoC:
-		cout << "Header is req_read_log_StoC" << endl;
+		
+		
+		cout << "req_read_log_StoC" << endl;
+		EnterCriticalSection(&Server->hCS_FileAccess);
+		//모든 txt 파일 내부의 글들을 한줄씩 읽어 들여
+		//한줄씩 보냅니다.
+		while (!Server->ReadFile.eof())
+		{
+			Server->ReadFile.getline(totalLog, BUFSIZ);
+			//확인용
+			cout << "log : " << totalLog << endl;
+			sPacket->Length = strlen(totalLog) + 2;
+			totalLog[strlen(totalLog)] = '\n';
+			//한글로 된 로그가 문제됨
+			strcpy_s(dPacket->CString, BUFSIZ, totalLog);
+
+			cs->retval = send(cs->sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+			if (cs->retval == SOCKET_ERROR) {
+				err_display("send()");
+				//LeaveCriticalSection(&hCriticalSection);
+
+				return false;
+			}
+			//cout << "sPacket length : " << sPacket->Length << endl;
+			//cout << "dPacket length : " << strlen(dPacket->CString) << endl;
+			//Dynamic packet 전송
+			cs->retval = send(cs->sock, (char*)dPacket, sPacket->Length, 0);
+			if (cs->retval == SOCKET_ERROR) {
+				err_display("send()");
+				//LeaveCriticalSection(&hCriticalSection);
+
+				return false;
+			}
+			//메시지를 전송한 후 dPacket string을 초기화 시켜준다
+			dPacket->ResetCString();
+			memset(totalLog, NULL, BUFSIZ);
+		}
+		LeaveCriticalSection(&Server->hCS_FileAccess);
+
+		
+
+
 		break;
 	 
 	case EPacketHeader::send_msg_CtoS:
@@ -702,6 +746,7 @@ void UMultiThreadServer::initFileStreamer()
 }
 void UMultiThreadServer::closeFileStreamer()
 {
+	
 	ReadFile.close();
 	WriteFile.close();
 }
@@ -749,7 +794,7 @@ string UMultiThreadServer::getCurrentTime_ToString()
 	localtime_s(&t, &timer); // 초 단위의 시간을 분리하여 구조체에 넣기 
 	//printf("현재 시간은 "); printf("%d년 %d월 %d일 %d시 %d분 %d초 %d milsec입니다.\n", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, msc);
 	stringstream s_buffer;
-	s_buffer<<" 시작 시간 " << t.tm_year + 1900<<"년 " << t.tm_mon + 1<<"월 " << t.tm_mday<<"일 " << t.tm_hour<<"시 " << t.tm_min<<"분 " << t.tm_sec<<"초 "<<msc<<" milsec입니다.\n";
+	s_buffer<<"Start Time " << t.tm_year + 1900<<"/ " << t.tm_mon + 1<<"/ " << t.tm_mday<<"/ " << t.tm_hour<<": " << t.tm_min<<": " << t.tm_sec<<": "<<msc<<".\n";
 
 	retval = s_buffer.str();
 	return retval;

@@ -164,7 +164,7 @@ private: // Private Functions
 	//
 	bool receiveData(ClientSocket* cs, FStaticPacket* sPacket, FDynamicPacket* dPacket);
 	bool receiveData(ClientSocket* cs, FDynamicPacket* packet,const int Length);
-	bool sendData(ClientSocket* cs, FStaticPacket* sPacket, FDynamicPacket* dPacket);
+	bool sendData(ClientSocket* cs, FStaticPacket* sPacket, FDynamicPacket* dPacket,UMultiThreadServer* Server);
 	bool sendData(ClientSocket* cs, FDynamicPacket* packet, const int Length);
 	/* 원하는 문구를 추가
 		@Param
