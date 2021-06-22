@@ -314,7 +314,7 @@ unsigned int __stdcall UTCPClient::procRecieve(LPVOID IpParam)
 				return false;
 			}
 			//cout << "[Notify] 받아온 서버의 Log 입니다." << endl;
-			cout << client->dPacket->CString;
+			cout << client->dPacket->CString << endl;
 
 			break;
 		//클라이언트는 못 받습니다

@@ -622,17 +622,20 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * sPacket, FD
 	case EPacketHeader::req_read_log_StoC:
 		
 		
-		cout << "req_read_log_StoC" << endl;
+		//cout << "req_read_log_StoC" << endl;
 		EnterCriticalSection(&Server->hCS_FileAccess);
+
+		//읽기 전용
+		ReadFile.open(FileAddress, ios_base::in);
 		//모든 txt 파일 내부의 글들을 한줄씩 읽어 들여
 		//한줄씩 보냅니다.
 		while (!Server->ReadFile.eof())
 		{
 			Server->ReadFile.getline(totalLog, BUFSIZ);
 			//확인용
-			cout << "log : " << totalLog << endl;
-			sPacket->Length = strlen(totalLog) + 2;
-			totalLog[strlen(totalLog)] = '\n';
+			//cout << "log : " << totalLog << endl;
+			sPacket->Length = strlen(totalLog) + 1;
+			
 			//한글로 된 로그가 문제됨
 			strcpy_s(dPacket->CString, BUFSIZ, totalLog);
 
@@ -657,6 +660,8 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * sPacket, FD
 			dPacket->ResetCString();
 			memset(totalLog, NULL, BUFSIZ);
 		}
+		
+		Server->ReadFile.close();
 		LeaveCriticalSection(&Server->hCS_FileAccess);
 
 		
@@ -736,8 +741,7 @@ void UMultiThreadServer::syncShareValue()
 void UMultiThreadServer::initFileStreamer()
 {
 
-	//읽기 전용
-	ReadFile.open(FileAddress, ios_base::in);
+	
 	//Append 
 	WriteFile.open(FileAddress, ios_base::app);
 	WriteFile  << getCurrentTime_ToString()<<endl;
