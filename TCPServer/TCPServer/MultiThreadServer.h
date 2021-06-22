@@ -190,10 +190,10 @@ private: // Private Functions
 	//			File 처리 관련
 	//	기록을 남길 파일을 불러옵니다. 파일 이름은 FileAddress에 적고
 	//	
-	void initFileStreamer();
-	
+	void openWriteFile();	
+
 	//	불러들인 파일을 닫습니다
-	void closeFileStreamer();
+	void closeWriteFile();
 
 
 

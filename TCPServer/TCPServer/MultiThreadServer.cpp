@@ -34,7 +34,7 @@ int UMultiThreadServer::initServer()
 	InitializeCriticalSection(&hCS_DeleteCS);
 	InitializeCriticalSection(&hCS_FileAccess);
 	//파일 시스템 초기화
-	initFileStreamer();
+	openWriteFile();
 
 	return 0;
 }
@@ -98,7 +98,7 @@ int UMultiThreadServer::CloseServer()
 	DeleteCriticalSection(&hCS_DeleteCS);
 	// 윈속 종료
 	WSACleanup();
-	closeFileStreamer();
+	closeWriteFile();
 	return 0;
 }
 
@@ -313,10 +313,10 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 
 	}
-
-
+	//========================================================
+	//클라이언트와 연결 해제 작업
 		//client sockets에서 현재 이 클라이언트와의 정보를 지운다. 
-	EnterCriticalSection(&server->hCS_DeleteCS);
+		EnterCriticalSection(&server->hCS_DeleteCS);
 	
 		// closesocket()
 		closesocket(socket->sock);
@@ -646,8 +646,7 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * sPacket, FD
 
 				return false;
 			}
-			//cout << "sPacket length : " << sPacket->Length << endl;
-			//cout << "dPacket length : " << strlen(dPacket->CString) << endl;
+			 
 			//Dynamic packet 전송
 			cs->retval = send(cs->sock, (char*)dPacket, sPacket->Length, 0);
 			if (cs->retval == SOCKET_ERROR) {
@@ -738,7 +737,7 @@ void UMultiThreadServer::syncShareValue()
 	
 }
 
-void UMultiThreadServer::initFileStreamer()
+void UMultiThreadServer::openWriteFile()
 {
 
 	
@@ -748,12 +747,13 @@ void UMultiThreadServer::initFileStreamer()
 
 
 }
-void UMultiThreadServer::closeFileStreamer()
+
+void UMultiThreadServer::closeWriteFile()
 {
-	
-	ReadFile.close();
 	WriteFile.close();
 }
+
+
 
 
 int UMultiThreadServer::addClient()
@@ -777,8 +777,10 @@ int UMultiThreadServer::removeClient(int num)
 void UMultiThreadServer::writeLog(const char * Input)
 {
 	EnterCriticalSection(&hCS_FileAccess);
-	WriteFile << Input << endl;
-
+	if (WriteFile.is_open())
+	{
+		WriteFile << Input << endl;
+	}
 	LeaveCriticalSection(&hCS_FileAccess);
 }
  
