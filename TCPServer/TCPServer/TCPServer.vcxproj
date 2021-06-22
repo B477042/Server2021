@@ -123,14 +123,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EventManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MultiThreadServer.cpp" />
+    <ClCompile Include="MyPacket.cpp" />
     <ClCompile Include="SingleTCPServer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EventManager.h" />
     <ClInclude Include="MultiThreadServer.h" />
+    <ClInclude Include="MyPacket.h" />
     <ClInclude Include="SingleTCPServer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

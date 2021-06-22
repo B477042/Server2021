@@ -1,18 +1,18 @@
 #include "MultiThreadServer.h"
 
 
- int  UMultiThreadServer::Share = 0;
+ //int  UMultiThreadServer::Share = 0;
 
 UMultiThreadServer::UMultiThreadServer()
 {
-	waitTimer = 0;
+	WaitTimer = 0;
 	bPower = true;
 	n_Client = 0;
 
 	n_Client = 0;
 	for (int i = Idx_thread; i < NUM_OF_THREAD; ++i)
-		remainThreadSlot.push(i);
-
+		RemainThreadSlot.push(i);
+	
 	
 }
 
@@ -25,15 +25,16 @@ int UMultiThreadServer::initServer()
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 1;
 
-
+	//서버 소켓 초기화
 	createServerSocket();
-
+	//크리티컬 섹션 초기화
 	InitializeCriticalSection(&hCS_ProcAccept);
 	InitializeCriticalSection(&hCS_AcceptSocket);
-	
 	InitializeCriticalSection(&hcs_ReceiveData);
 	InitializeCriticalSection(&hCS_DeleteCS);
-
+	InitializeCriticalSection(&hCS_FileAccess);
+	//파일 시스템 초기화
+	initFileStreamer();
 
 	return 0;
 }
@@ -76,14 +77,15 @@ int UMultiThreadServer::RunMultiThreadServer()
 	ResumeThread(hThread[Idx_Accept]);
 
 	//cout << "stop!" << endl;
-	WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+	//WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
+	WaitForSingleObject(hThread[Idx_Wait], INFINITE);
 
 	cout << "ByeBye" << endl;
 	//cout << "GJ" << endl;
 	return 0;
 }
 
-int UMultiThreadServer::closeServer()
+int UMultiThreadServer::CloseServer()
 {
 
 	// closesocket()
@@ -92,10 +94,11 @@ int UMultiThreadServer::closeServer()
 	DeleteCriticalSection(&hCS_ProcAccept);
 	DeleteCriticalSection(&hCS_AcceptSocket);
 	DeleteCriticalSection(&hcs_ReceiveData);
-
+	DeleteCriticalSection(&hCS_FileAccess);
 	DeleteCriticalSection(&hCS_DeleteCS);
 	// 윈속 종료
 	WSACleanup();
+	closeFileStreamer();
 	return 0;
 }
 
@@ -148,19 +151,19 @@ unsigned int __stdcall UMultiThreadServer::procWait(LPVOID lpParam)
 	}
 
 	DWORD sleepTime = 100;
-
+	
 	//연결된 클라이언트가 없다면 0.1초마다 타이머를 한번씩 올린다. 
 	while (1)
 	{
 		//power check
 		if (!server ->bPower)break;
 		// timer timeout		
-		if (server->waitTimer >= server->M_waitTime)break;
+		if (server->WaitTimer >= server->Max_WaitTime)break;
 
 		//연결이 됐다면
 		if (server->n_Client > 0) { 
 			//타이머 초기화
-			server->waitTimer = 0;
+			server->WaitTimer = 0;
 
 
 			continue; 
@@ -169,19 +172,19 @@ unsigned int __stdcall UMultiThreadServer::procWait(LPVOID lpParam)
 		Sleep(sleepTime);
 		
 
-		server->waitTimer += sleepTime;
+		server->WaitTimer += sleepTime;
 
-		DWORD dur = server->M_waitTime - server->waitTimer;
+		DWORD dur = server->Max_WaitTime - server->WaitTimer;
 
-		if (dur == server->M_waitTime / 2)
+		if (dur == server->Max_WaitTime / 2)
 		{
-			cout << server->M_waitTime / 2000 << "초 후 프로그렘 종료" << endl;
+			cout << server->Max_WaitTime / 2000 << "초 후 프로그렘 종료" << endl;
 			continue;
 		}
 
-		if (dur == server->M_waitTime / 4)
+		if (dur == server->Max_WaitTime / 4)
 		{
-			cout << server->M_waitTime / 4000 << "초 후 프로그렘 종료" << endl;
+			cout << server->Max_WaitTime / 4000 << "초 후 프로그렘 종료" << endl;
 			continue;
 		}
 	}
@@ -221,12 +224,12 @@ unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 		Data->Server = server;
 		Data->idx_Sockets = cSocket;
 
-		//queue<int> remainThreadSlot 에 접근하여 남아있는 Thread index를 받아온다.
+		//queue<int> RemainThreadSlot 에 접근하여 남아있는 Thread index를 받아온다.
 		//여러 쓰레드에서 동시에 접근하면 꼬이니까 동기화 시켜둔다
 		EnterCriticalSection(&server->hCS_ProcAccept);
 
 
-		if (server->remainThreadSlot.empty())
+		if (server->RemainThreadSlot.empty())
 		{
 			LeaveCriticalSection(&server->hCS_ProcAccept);
 			continue;
@@ -240,7 +243,7 @@ unsigned int __stdcall  UMultiThreadServer::procAccept(LPVOID lpParam)
 
 		LeaveCriticalSection(&server->hCS_ProcAccept);
 		//thread를 할당해서 통신을 시킨다
-		server->createCommunicationRoom(Data, idx_t);
+		server->CreateCommunicationRoom(Data, idx_t);
 
 	}
 
@@ -269,10 +272,15 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	auto server = Data->Server;
 	auto socket = Data->idx_Sockets;
 
-	CommunicationData* CD= new CommunicationData();
-	memset(CD->buf_Message,0,BUFSIZE+1);
-	memset(CD->buf_IP, 0, BUFSIZE + 1);
-	CD->Share = Share;
+	
+	//CommunicationData* CD= new CommunicationData();
+	//memset(CD->buf_Message,0,BUFSIZE+1);
+	//memset(CD->buf_IP, 0, BUFSIZE + 1);
+	//CD->Share = Share;
+	//통신용 패킷 초기화
+	//MyPacket* packet = new MyPacket();
+	FStaticPacket* sPacket = new FStaticPacket();
+	FDynamicPacket*dPacket = new FDynamicPacket();
 
 	//데이터 송수신 상태
 	while (1)
@@ -280,9 +288,9 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 		//문제가 생기면 송수신 중단
 		if (!bResult)break;
 
-		//수신
+		//수신. static packet
 		
-		if (server->receiveData(socket,CD) == false)
+		if (server->receiveData(socket,sPacket,dPacket) == false)
 		{
 				bResult = false;
 				
@@ -292,11 +300,14 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 		//송신
 		
-		if (server->sendData(socket,CD) == false)
+		if (server->sendData(socket,sPacket, dPacket,server) == false)
 		{
 			bResult = false;
 			
 		}
+
+		
+
 
 		//server->sendShare(socket);
 
@@ -309,8 +320,15 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 	
 		// closesocket()
 		closesocket(socket->sock);
-		::printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
+		char logString[BUFSIZE] = "0,";
+		//logString에 문자열 저장
+		
+		
+
+		sprintf(logString,"[TCP Server] Client Disconnected: IP Address=%s, Port #%d\n",
 			inet_ntoa(socket->addr.sin_addr), ntohs(socket->addr.sin_port));
+		server->writeLog(logString);
+
 
 		server->removeClient(Data->idx_Thread);
 		
@@ -329,11 +347,12 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 		server->ClientSockets.erase(server->ClientSockets.begin() + idx_remove);
 		//printf("Erase ClientSocket\n"); //출력 확인
 
-	LeaveCriticalSection(&server->hCS_DeleteCS);
+		LeaveCriticalSection(&server->hCS_DeleteCS);
 		delete Data;
-		delete CD;
-
-	
+		//delete CD;
+		//delete packet;
+		delete sPacket;
+		delete dPacket;
 	
 	return 0;
 }
@@ -341,7 +360,7 @@ unsigned int __stdcall  UMultiThreadServer::procCommunication(LPVOID lpParam)
 
 
 
-bool UMultiThreadServer::createCommunicationRoom(void* inputParam, int idx_t)
+bool UMultiThreadServer::CreateCommunicationRoom(void* inputParam, int idx_t)
 {
 	auto Data = (ConnectionData*)inputParam;
 
@@ -433,10 +452,17 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 		return nullptr;
 	}
 
-	// 접속한 클라이언트 정보 출력
-	printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
+	//콘솔창 출력 작업 및 log 파일에 기록 작업
+	char logString[BUFSIZE] = "0,";
+	//logString에 문자열 저장
+	WriteFile << "===================================================================================\n";
+	sprintf(logString,"\n[TCP Server] Client Connected : IP Address=%s, Port #%d\n",
 		inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-	
+	writeLog(logString);
+	printf("%s", logString);
+
+
+	//클라이언트 소켓 정보 저장
 	ClientSocket* clientSocket = new ClientSocket();
 	clientSocket->sock = client_sock;
 	clientSocket->addr = clientaddr;
@@ -448,7 +474,7 @@ ClientSocket* UMultiThreadServer::acceptSocket(SOCKET * sock)
 	
 	return clientSocket;
 }
-
+//구버전
 bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 {
 
@@ -462,53 +488,20 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	else if (cs->retval == 0)
 		return false;
 
+	//Critical Section 진입 :출력 로그를 순서대로 출력시키기 위해서
 	EnterCriticalSection(&hcs_ReceiveData);
 
-	if (Share < cd->Share)
-		Share = cd->Share;
-	SyncShareValue();
+	
 
 	// 받은 메시지 데이터 출력
 	cd->buf_Message[strlen(cd->buf_Message)] = '\0';
 	printf("[TCP/%s:%d] %s\n", inet_ntoa(cs->addr.sin_addr),
 		ntohs(cs->addr.sin_port), cd->buf_Message);
 
-	printf("[TCP/%s:%d] 클라이언트 IP : %s\tShare = %d\n", inet_ntoa(cs->addr.sin_addr),
-		ntohs(cs->addr.sin_port), cd->buf_IP,Share);
+	//printf("[TCP/%s:%d] 클라이언트 IP : %s\n", inet_ntoa(cs->addr.sin_addr),
+	//	ntohs(cs->addr.sin_port));
 
-	////======================과제 데이터 전송 실습==================
-	////데이터 전송 실습
-	//HeaderUserInfo headerUser;
-	//UserInfoData user;
-	////user.message = nullptr;
-
-	//cs->retval = recv(cs->sock, (char*)&headerUser, sizeof(HeaderUserInfo), 0);
-	//if (cs->retval == SOCKET_ERROR) {
-	//	err_display("recv()");
-	//	return false;
-	//}
-	//else if (cs->retval == 0)
-	//	return false;
-	//printf("선행 구조체 전달 : %d byte\n", headerUser.dataSize);
-	////user.message = new char[headerUser.messageLen];
-	////memset(user.message, 0, headerUser.messageLen);
-	//memset(user.message, 0, BUFSIZE);
-
-	//cs->retval = recv(cs->sock, (char*)&user, headerUser.dataSize, 0);
-	//if (cs->retval == SOCKET_ERROR) {
-	//	err_display("recv()");
-	//	return false;
-	//}
-	//else if (cs->retval == 0)
-	//	return false;
-
-	//printf("데이터 : x=%d, y=%d,z=%d, id=%d\n", user.x, user.y, user.z, user.id);
-	//printf("Message : %s\n", user.message);
-
-
-	//delete[]user.message;
-	//memset(cd->buf_Message, 0, BUFSIZE + 1);
-	//memset(cd->buf_IP, 0, BUFSIZE + 1);
+	
 
 
 	LeaveCriticalSection(&hcs_ReceiveData);
@@ -519,6 +512,8 @@ bool UMultiThreadServer::receiveData(ClientSocket* cs,CommunicationData* cd)
 	return true;
 }
 
+
+//구버전
 bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 {
 	//EnterCriticalSection(&hCriticalSection);
@@ -527,8 +522,8 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 	//문구 추가
 	addAditionalText(cd->buf_Message, " from Server", cs->retval);
 	//printf("\ncd->share :%d \t share : %d\n", cd->Share, Share);
-	//Share값 추가
-	cd->Share = Share;
+	////Share값 추가
+	//cd->Share = Share;
 	
 	// 데이터 보내기
 	cs->retval = send(cs->sock, (char*)cd, sizeof(CommunicationData), 0);
@@ -538,12 +533,181 @@ bool UMultiThreadServer::sendData(ClientSocket * cs, CommunicationData* cd)
 	
 		return false;
 	}
-//	printf("\ncd->share :%d \t share : %d\n", cd->Share, Share);
+
 	
+	return true;
+}
+
+bool UMultiThreadServer::receiveData(ClientSocket * cs, FStaticPacket* sPacket, FDynamicPacket* dPacket)
+{
+
+	// Static Packet 받기
+	cs->retval = recv(cs->sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+	if (cs->retval == SOCKET_ERROR) {
+		err_display("recv()");
+		return false;
+	}
+	else if (cs->retval == 0)
+		return false;
+
+	//Critical Section 진입 :출력 로그를 순서대로 출력시키기 위해서
+	EnterCriticalSection(&hcs_ReceiveData);
+	switch (sPacket->Header)
+	{
+	case EPacketHeader::Null:
+		cout << "Header is NULL" << endl;
+		break;
+	case EPacketHeader::req_read_log_CtoS:
+		
+		sPacket->Header = EPacketHeader::req_read_log_StoC;
+		break;
+	case EPacketHeader::req_read_log_StoC:
+		cout << "[오류] 서버는 req_read_log_StoC를 받을 수 없습니다" << endl;
+		break;
+		//Client로부터 Dynamic Packet을 받아옵니다
+		//받은 후 클라이언트에게 확인 메시지를 보내기 위해 Static Packet의 해더를
+		//send_msg_StoC로 바꿉니다
+	case EPacketHeader::send_msg_CtoS:
+		
+		receiveData(cs, dPacket, sPacket->Length);
+		sPacket->Header = EPacketHeader::send_msg_StoC;
+		break;
+	case EPacketHeader::send_msg_StoC:
+		cout << "[오류] 서버는 send_msg_StoC를 받을 수 없습니다" << endl;
+		
+		break;
+
+ 
+	}
+	LeaveCriticalSection(&hcs_ReceiveData);
+
+	return true;
+}
+//
+bool UMultiThreadServer::receiveData(ClientSocket * cs, FDynamicPacket * packet, const int Length)
+{
+	
+	cs->retval = recv(cs->sock, (char*)packet, sizeof(FDynamicPacket)+Length, 0);
+	if (cs->retval == SOCKET_ERROR) {
+		err_display("recv()");
+		return false;
+	}
+	else if (cs->retval == 0)
+		return false;
+	//클라이언트로 부터 온 데이터를 출력하고 출력 메시지와 같은 내용을 파일에 작성합니다
+	cout << "[TCP / "<< inet_ntoa(cs->addr.sin_addr)<<":"<< ntohs(cs->addr.sin_port)<<"] " << packet->CString << endl;
+	EnterCriticalSection(&hCS_FileAccess);
+	WriteFile<< "[TCP / " << inet_ntoa(cs->addr.sin_addr) << ":" << ntohs(cs->addr.sin_port) << "] " << packet->CString << endl;
+	LeaveCriticalSection(&hCS_FileAccess);
+	return true;
+}
 
 
-	//LeaveCriticalSection(&hCriticalSection);
-	
+
+
+
+bool UMultiThreadServer::sendData(ClientSocket * cs, FStaticPacket * sPacket, FDynamicPacket * dPacket, UMultiThreadServer * Server)
+{
+	char totalLog[BUFSIZ] = "0,";
+	switch (sPacket->Header)
+	{
+	case EPacketHeader::Null:
+		cout << "Header is NULL" << endl;
+		
+		break;
+	case EPacketHeader::req_read_log_CtoS:
+		cout << "[오류] 서버는 req_read_log_CtoS를 보낼 수 없습니다" << endl;
+
+		break;
+	case EPacketHeader::req_read_log_StoC:
+		
+		
+		//cout << "req_read_log_StoC" << endl;
+		EnterCriticalSection(&Server->hCS_FileAccess);
+
+		//읽기 전용
+		ReadFile.open(FileAddress, ios_base::in);
+		//모든 txt 파일 내부의 글들을 한줄씩 읽어 들여
+		//한줄씩 보냅니다.
+		while (!Server->ReadFile.eof())
+		{
+			Server->ReadFile.getline(totalLog, BUFSIZ);
+			//확인용
+			//cout << "log : " << totalLog << endl;
+			sPacket->Length = strlen(totalLog) + 1;
+			
+			//한글로 된 로그가 문제됨
+			strcpy_s(dPacket->CString, BUFSIZ, totalLog);
+
+			cs->retval = send(cs->sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+			if (cs->retval == SOCKET_ERROR) {
+				err_display("send()");
+				//LeaveCriticalSection(&hCriticalSection);
+
+				return false;
+			}
+			//cout << "sPacket length : " << sPacket->Length << endl;
+			//cout << "dPacket length : " << strlen(dPacket->CString) << endl;
+			//Dynamic packet 전송
+			cs->retval = send(cs->sock, (char*)dPacket, sPacket->Length, 0);
+			if (cs->retval == SOCKET_ERROR) {
+				err_display("send()");
+				//LeaveCriticalSection(&hCriticalSection);
+
+				return false;
+			}
+			//메시지를 전송한 후 dPacket string을 초기화 시켜준다
+			dPacket->ResetCString();
+			memset(totalLog, NULL, BUFSIZ);
+		}
+		
+		Server->ReadFile.close();
+		LeaveCriticalSection(&Server->hCS_FileAccess);
+
+		
+
+
+		break;
+	 
+	case EPacketHeader::send_msg_CtoS:
+		cout << "[오류] 서버는 send_msg_CtoS를 보낼 수 없습니다" << endl;
+	 
+		break;
+
+		//Client로 확인 메시지를 보냅니다
+	case EPacketHeader::send_msg_StoC:
+
+		//클라로 보낼 문구 추가
+		addAditionalText(dPacket->CString, " from Server", sPacket->Length);
+		//Static packet 전송
+		cs->retval = send(cs->sock, (char*)sPacket, sizeof(FStaticPacket), 0);
+		if (cs->retval == SOCKET_ERROR) {
+			err_display("send()");
+			//LeaveCriticalSection(&hCriticalSection);
+
+			return false;
+		}
+		//Dynamic packet 전송
+		cs->retval = send(cs->sock, (char*)dPacket, sPacket->Length, 0);
+		if (cs->retval == SOCKET_ERROR) {
+			err_display("send()");
+			//LeaveCriticalSection(&hCriticalSection);
+
+			return false;
+		}
+		//메시지를 전송한 후 dPacket string을 초기화 시켜준다
+		dPacket->ResetCString();
+
+		break;
+	}
+
+
+
+	return true;
+}
+
+bool UMultiThreadServer::sendData(ClientSocket * cs, FDynamicPacket* packet, const int Length)
+{
 	return true;
 }
 
@@ -560,56 +724,43 @@ void UMultiThreadServer::addAditionalText(char * inputBuf, const char * text, in
 
 
 }
-void UMultiThreadServer::SyncShareValue()
+void UMultiThreadServer::syncShareValue()
 {
-	char buf[255];
-	memset(buf, 0, 255);
-	_itoa_s(Share, buf,10);
-	//printf("in sync :%s", buf);
-	for (auto it : ClientSockets)
-	{
-		send(it->sock, buf, strlen(buf),0);
-	}
-	/*for (auto it : ClientSockets)
-	{
-		send(it->sock,(char*) Share, sizeof(int), 0);
-	}*/
+	//char buf[255];
+	//memset(buf, 0, 255);
+	//_itoa_s(Share, buf,10);
+	////printf("in sync :%s", buf);
+	//for (auto it : ClientSockets)
+	//{
+	//	send(it->sock, buf, strlen(buf),0);
+	//}
+	 
 	
 }
-//
-//void UMultiThreadServer::sendShare(FClientSocket * cs)
-//{
-//	//buf_Message값 초기화
-//	memset(cs->buf_Message, 0, sizeof cs->buf_Message);
-//	////Client ip주소 써주기
-//	//addAditionalText(cs->buf_Message, inet_ntoa(cs->addr.sin_addr), cs->retval);
-//	////Share text 써주기
-//	//addAditionalText(cs->buf_Message, " Share=", cs->retval);
-//
-//	////Test value 10
-//	//addAditionalText(cs->buf_Message, "10", cs->retval);
-//
-//	//보낼 메시지 작성
-//	char message[BUFSIZE];
-//	sprintf(message, "%s Share=10", inet_ntoa(cs->addr.sin_addr));
-//	memcpy(cs->buf_Message, message, strlen(message));
-//
-//	printf("\nSend Message : %s\n", message);
-//	cs->retval = send(cs->sock, cs->buf_Message, strlen(cs->buf_Message), 0);
-//	if (cs->retval == SOCKET_ERROR)
-//	{
-//		err_display("send()");
-//
-//	}
-//
-//
-//}
+
+void UMultiThreadServer::initFileStreamer()
+{
+
+	
+	//Append 
+	WriteFile.open(FileAddress, ios_base::app);
+	WriteFile  << getCurrentTime_ToString()<<endl;
+
+
+}
+void UMultiThreadServer::closeFileStreamer()
+{
+	
+	ReadFile.close();
+	WriteFile.close();
+}
+
 
 int UMultiThreadServer::addClient()
 {
 	++n_Client;
-	int retval = remainThreadSlot.front();
-	remainThreadSlot.pop();
+	int retval = RemainThreadSlot.front();
+	RemainThreadSlot.pop();
 	return retval;
 }
 
@@ -618,34 +769,23 @@ int UMultiThreadServer::removeClient(int num)
 	if (num < Idx_thread || num >= NUM_OF_THREAD)
 		return -1;
 	--n_Client;
-	remainThreadSlot.push(num);
+	RemainThreadSlot.push(num);
 
 	return 0;
 }
 
-//// num_of_thread보다 더 많이 들어가는걸 방지한다
-//bool UMultiThreadServer::checkThreadSpace()
-//{
-//	int dwLeng =sizeof dwThreadId/sizeof dwThreadId[0] ;
-//	int hLeng = sizeof hThread / sizeof hThread[0];
-//
-//
-//	if (dwLeng > NUM_OF_THREAD)
-//	{
-//		cout << "dwThreadId length error" << endl;
-//		return false;
-//	}
-//	if (hLeng > NUM_OF_THREAD)
-//	{
-//		cout<<"hThread length error"
-//		return false;
-//	}
-//
-//	return true;
-//}
-
-void UMultiThreadServer::printCurrentTime()
+void UMultiThreadServer::writeLog(const char * Input)
 {
+	EnterCriticalSection(&hCS_FileAccess);
+	WriteFile << Input << endl;
+
+	LeaveCriticalSection(&hCS_FileAccess);
+}
+ 
+
+string UMultiThreadServer::getCurrentTime_ToString()
+{
+	string retval;
 	auto stime = std::chrono::system_clock::now();
 	auto mill = std::chrono::duration_cast<std::chrono::milliseconds>(stime.time_since_epoch());
 
@@ -656,6 +796,10 @@ void UMultiThreadServer::printCurrentTime()
 	time_t timer; // 시간측정
 	timer = time(NULL); // 현재 시각을 초 단위로 얻기
 	localtime_s(&t, &timer); // 초 단위의 시간을 분리하여 구조체에 넣기 
-	printf("현재 시간은 "); printf("%d년 %d월 %d일 %d시 %d분 %d초 %d milsec입니다.\n", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, msc);
+	//printf("현재 시간은 "); printf("%d년 %d월 %d일 %d시 %d분 %d초 %d milsec입니다.\n", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, msc);
+	stringstream s_buffer;
+	s_buffer<<"Start Time " << t.tm_year + 1900<<"/ " << t.tm_mon + 1<<"/ " << t.tm_mday<<"/ " << t.tm_hour<<": " << t.tm_min<<": " << t.tm_sec<<": "<<msc<<".\n";
 
+	retval = s_buffer.str();
+	return retval;
 }

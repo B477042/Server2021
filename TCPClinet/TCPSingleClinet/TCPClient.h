@@ -13,6 +13,7 @@
 #include <Windows.h>
 #include <process.h>
 #include <tchar.h>
+#include "MyPacket.h"
 using namespace std;
 #define SERVERIP   "127.0.0.1"
 #define SERVERPORT 9000
@@ -57,22 +58,6 @@ public:
 
 }CommunicationData;
 
-typedef struct HeaderUserInfo
-{
-public:
-	int messageLen;
-	int dataSize;
-
-}HeaderUserInfo;
-
-typedef struct UserInfoData
-{
-	int id;
-	int x;
-	int y;
-	int z;
-	char* message;
-}UserInfoData;
 
 
 class UTCPClient
@@ -89,15 +74,22 @@ public:
 private:
 
 
-	//Input으로 socket 넘겨줄 것
-	static unsigned int WINAPI procSend(LPVOID IpParam);
+	//사용자 인터페이스 스레드 함수
+	static unsigned int WINAPI procInteraction(LPVOID IpParam);
+	//수신 스레드 함수
 	static unsigned int WINAPI procRecieve(LPVOID IpParam);
+	//문자열을 서버로 보냅니다
+	bool writeMessage(SOCKET& sock, UTCPClient* client,int& retval);
+	//서버에게 로그를 보내줄 것을 요청합니다
+	bool requestReadMessage(SOCKET& sock, UTCPClient* client, int& retval);
+	
+
 
 //	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
 //	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
 
 
-	int recvn(SOCKET s, char* buf, int len, int flags);
+	//int recvn(SOCKET s, char* buf, int len, int flags);
 	void addAditionalText(char* inputBuf,const char* text);
 	void printCurrentTime();
 
@@ -120,8 +112,13 @@ private:
 
 	//Share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
 	bool bIsNewMessage;
-
-	CommunicationData* communicationData;
+	
+	//CommunicationData* communicationData;
+	//Static value packet
+	FStaticPacket* sPacket;
+	//Dynmaic value packet
+	FDynamicPacket* dPacket;
+	//MyPacket* Packet;
 
 	DWORD dwThreadId[NUM_OF_THREAD];
 

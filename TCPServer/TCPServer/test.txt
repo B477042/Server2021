@@ -1,0 +1,51 @@
+Start Time 2021/ 6/ 21/ 12: 5: 16: 349.
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #2672
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #2673
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #2674
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #2675
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #2676
+
+[TCP / 127.0.0.1:2672] this is first
+[TCP / 127.0.0.1:2673] this is second
+[TCP / 127.0.0.1:2674] this is third
+[TCP / 127.0.0.1:2675] hello world
+[TCP / 127.0.0.1:2676] it just works
+[TCP / 127.0.0.1:2676] hoo
+Start Time 2021/ 6/ 22/ 12: 1: 26: 982.
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #4238
+
+[TCP / 127.0.0.1:4238] sadf
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #4238
+
+Start Time 2021/ 6/ 22/ 12: 6: 35: 945.
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #4310
+
+Start Time 2021/ 6/ 22/ 12: 32: 54: 771.
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #4841
+
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #4841
+

@@ -14,7 +14,7 @@ int _tmain(int argc, TCHAR* argv[])
 	//서버 프로그램 실행
 	server.RunMultiThreadServer();
 	
-	server.closeServer();
+	server.CloseServer();
 
 	return 0;
 }

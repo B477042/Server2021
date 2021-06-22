@@ -24,7 +24,7 @@
     <ClCompile Include="MultiThreadServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="EventManager.cpp">
+    <ClCompile Include="MyPacket.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,7 +35,7 @@
     <ClInclude Include="MultiThreadServer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="EventManager.h">
+    <ClInclude Include="MyPacket.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
