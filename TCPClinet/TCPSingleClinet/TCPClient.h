@@ -68,9 +68,6 @@ public:
 
 	
 
-
-
-
 private:
 
 
@@ -84,9 +81,6 @@ private:
 	bool requestReadMessage(SOCKET& sock, UTCPClient* client, int& retval);
 	
 
-
-//	bool sendData(int&retval,SOCKET& sock, char* buf, int length, int flags);
-//	bool receiveData(int&retval, SOCKET& sock, char* buf, int length, int flags);
 
 
 	//int recvn(SOCKET s, char* buf, int len, int flags);
@@ -107,13 +101,12 @@ private:
 
 
 private:
-	/*static char buf_Send[BUFSIZE];
-	static char buf_Receive[BUFSIZE];*/
+	
 
 	//Share값이 들어오면 true가 돼서 send proc에서 Share 값을 발송합니다. 발송 후 false
 	bool bIsNewMessage;
 	
-	//CommunicationData* communicationData;
+	
 	//Static value packet
 	FStaticPacket* sPacket;
 	//Dynmaic value packet

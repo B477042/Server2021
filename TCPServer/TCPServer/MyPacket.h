@@ -44,7 +44,7 @@ public:
 	int Length;
 	//EPacketHeader Data
 	int Header;
-
+	
 };
 //가변 길이 데이터가 들어있는 패킷
 struct FDynamicPacket
