@@ -1,0 +1,40 @@
+Start Time 2021/ 6/ 23/ 14: 12: 7: 534.
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #9838
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #9839
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #9840
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #9841
+
+===================================================================================
+
+[TCP Server] Client Connected : IP Address=127.0.0.1, Port #9843
+
+[TCP / 127.0.0.1:9838] sfasdfasdf sdfsadfe3f 
+[TCP / 127.0.0.1:9843] sdfhshi sf3rn 
+[TCP / 127.0.0.1:9841] sdfsdfh sv
+[TCP / 127.0.0.1:9840] sdfsv xcvdf
+[TCP / 127.0.0.1:9841] shdfd new message
+[TCP / 127.0.0.1:9841]  sdfsadfasdf 
+[TCP / 127.0.0.1:9839] dfdfsdfd 
+[TCP / 127.0.0.1:9839] asdfsdfsadf sdfsdfsadf sdf
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #9840
+
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #9839
+
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #9843
+
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #9838
+
+[TCP Server] Client Disconnected: IP Address=127.0.0.1, Port #9841
+
